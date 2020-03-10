@@ -52,7 +52,16 @@ function sync_validateomega_services($options = null){
             curl_setopt($curl, CURLOPT_POST, FALSE);
             //curl_setopt($curl, CURLOPT_POSTFIELDS, json_encode($fields));
             curl_setopt($curl, CURLOPT_HTTPHEADER, array("Content-Type: application/json"));
+
+            mtrace("## conexion a servicios Omega Iniciada ##");
             $result = json_decode(curl_exec($curl));
+            mtrace("## conexion a servicios Omega Completada ##");
+
+            if(curl_errno($curl)){
+                mtrace("## Error CURL ##");
+                throw new Exception(curl_error($curl));
+            }
+
             curl_close($curl);
 
             $registros = count($result);
@@ -92,8 +101,19 @@ function sync_getusers_fromomega($academicids, $syncinfo, $options = null){
             curl_setopt($curl, CURLOPT_RETURNTRANSFER, TRUE);
             curl_setopt($curl, CURLOPT_POST, TRUE);
             curl_setopt($curl, CURLOPT_POSTFIELDS, json_encode($fields));
+            curl_setopt($curl, CURLOPT_FAILONERROR, true); // Required for HTTP error codes to be reported via our call to curl_error($ch)
             curl_setopt($curl, CURLOPT_HTTPHEADER, array("Content-Type: application/json"));
+            curl_setopt($curl, CURLOPT_TIMEOUT, 200);
+
+            mtrace("## conexion a servicios Omega Iniciada ##");
             $result = json_decode(curl_exec($curl));
+            mtrace("## conexion a servicios Omega Completada ##");
+
+            if(curl_errno($curl)){
+                mtrace("## Error CURL ##");
+                throw new Exception(curl_error($curl));
+            }
+
             curl_close($curl);
 
             $registros = count($result);
@@ -210,8 +230,19 @@ function sync_getcourses_fromomega($academicids, $syncinfo, $options = null){
             curl_setopt($curl, CURLOPT_RETURNTRANSFER, TRUE);
             curl_setopt($curl, CURLOPT_POST, TRUE);
             curl_setopt($curl, CURLOPT_POSTFIELDS,json_encode($fields));
+            curl_setopt($curl, CURLOPT_FAILONERROR, true); // Required for HTTP error codes to be reported via our call to curl_error($ch)
             curl_setopt($curl, CURLOPT_HTTPHEADER, array("Content-Type: application/json"));
+            curl_setopt($curl, CURLOPT_TIMEOUT, 200);
+
+            mtrace("## conexion a servicios Omega Iniciada ##");
             $result = json_decode(curl_exec($curl));
+            mtrace("## conexion a servicios Omega Completada ##");
+
+            if(curl_errno($curl)){
+                mtrace("## Error CURL ##");
+                throw new Exception(curl_error($curl));
+            }
+
             curl_close($curl);
             $registros = count($result);
 
