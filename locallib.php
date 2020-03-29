@@ -142,7 +142,7 @@ function sync_getusers_fromomega($academicids, $syncinfo, $options = null){
         }
 
         $academicdbycourseid = sync_getacademicbycourseids($coursesids);
-        if ($options) {
+        if ($options['debug']) {
             mtrace("#### Adding Enrollments ####");
         }
 
@@ -175,7 +175,7 @@ function sync_getusers_fromomega($academicids, $syncinfo, $options = null){
                 if($insertdata->course != NULL){
                     $users[] = $insertdata;
                     $syncinfo[$academicid]["enrol"] += 1;
-                    if ($options) {
+                    if ($options['debug']) {
                         mtrace("USER: ".$insertdata->user." TYPE: ".$insertdata->role." COURSE: ".$insertdata->course);
                     }
                 }
@@ -189,12 +189,12 @@ function sync_getusers_fromomega($academicids, $syncinfo, $options = null){
                     if(!in_array($generalcoursedata, $metausers)) {
                         $metausers[] = $generalcoursedata;
                         $syncinfo[$academicid]["enrol"] += 1;
-                        if ($options) {
+                        if ($options['debug']) {
                             mtrace("USER: ".$insertdata->user." TYPE: ".$generalcoursedata->role." COURSE: ".$generalcoursedata->course);
                         }
                     }
                 }
-            }elseif($options){
+            }elseif ($options['debug']){
                 mtrace("Skipping empty..");
             }
         }
@@ -273,7 +273,7 @@ function sync_getcourses_fromomega($academicids, $syncinfo, $options = null){
             if($insertdata->fullname != NULL && $insertdata->shortname != NULL && $insertdata->idnumber != NULL){
                 $courses[] = $insertdata;
                 $syncinfo[$course->PeriodoAcademicoId]["course"] += 1;
-                if ($options) {
+                if ($options['debug']) {
                     mtrace("COURSE: ".$insertdata->shortname." IDNUMBER: ".$insertdata->idnumber." CATEGORY: ".$insertdata->categoryid);
                 }
             }
@@ -294,7 +294,7 @@ function sync_getcourses_fromomega($academicids, $syncinfo, $options = null){
         $teacherscourse->shortname = $academicids."-PROFESORES";
         $teacherscourse->idnumber = NULL;
         $teacherscourse->categoryid = $syncinfo[$academicids]["categoryid"];
-        if ($options) {
+        if ($options['debug']) {
             mtrace("COURSE: ".$studentscourse->shortname." CATEGORY: ".$studentscourse->categoryid);
             mtrace("COURSE: ".$teacherscourse->shortname." CATEGORY: ".$teacherscourse->categoryid);
         }
@@ -310,12 +310,26 @@ function sync_getcourses_fromomega($academicids, $syncinfo, $options = null){
 	return array($courses, $syncinfo);
 }
 
-function sync_getacademicperiod($academicperiodid = 0){
+function getacademicperiods ($options = null, $status = 1) {
+    global $DB;
+
+    $academicperiodid = $options['academicperiodid'];
+    $currentstatus = SYNC_STATUS_ACTIVE;
+    if ($status == 0) $currentstatus = SYNC_STATUS_INACTIVE;
+
+    // Get all ID from each academic period
+    mtrace ("Get all academic period id with status {$status}");
+    if ($academicperiodid > 0) $periods = $DB->get_records("sync_data", array("status" => $currentstatus, "academicperiodid" => $academicperiodid));
+    else $periods = $DB->get_records("sync_data", array("status" => $currentstatus));
+
+    return $periods;
+
+}
+
+function sync_getacademicperiod($options = null){
 	global $DB;
-	
-	// Get all ID from each academic period with status is active (value 1)
-    if ($academicperiodid > 0) $periods = $DB->get_records("sync_data", array("status" => SYNC_STATUS_ACTIVE, "academicperiodid" => $academicperiodid));
-    else $periods = $DB->get_records("sync_data", array("status" => SYNC_STATUS_ACTIVE));
+
+	$periods = getacademicperiods($options, 1);
 
 	mtrace("Academic Period to synchronize \n");
 	$academicids = array();
@@ -365,23 +379,48 @@ function sync_getacademicbycourseids($coursesids){
 }
 
 function sync_getacademicperiodids_fromomega() {
-	global $CFG;
+    global $CFG;
 
-	$curl = curl_init();
-	$url = $CFG->sync_urlgetacademicperiods;
-	$token = $CFG->sync_token;	
-	$fields = array(
-			"token" => $token
-	);		
-	curl_setopt($curl, CURLOPT_URL, $url);
-	curl_setopt($curl, CURLOPT_RETURNTRANSFER, TRUE);
-	curl_setopt($curl, CURLOPT_POST, TRUE);
-	curl_setopt($curl, CURLOPT_POSTFIELDS,json_encode($fields));
-	curl_setopt($curl, CURLOPT_HTTPHEADER, array("Content-Type: application/json"));
-	$result = json_decode(curl_exec($curl));
-	curl_close($curl);
-	
-	return $result;
+    $curl = curl_init();
+    $url = $CFG->sync_urlgetacademicperiods;
+    $token = $CFG->sync_token;
+    $fields = array(
+        "token" => $token
+    );
+    curl_setopt($curl, CURLOPT_URL, $url);
+    curl_setopt($curl, CURLOPT_RETURNTRANSFER, TRUE);
+    curl_setopt($curl, CURLOPT_POST, TRUE);
+    curl_setopt($curl, CURLOPT_POSTFIELDS,json_encode($fields));
+    curl_setopt($curl, CURLOPT_HTTPHEADER, array("Content-Type: application/json"));
+    $result = json_decode(curl_exec($curl));
+    curl_close($curl);
+
+    return $result;
+}
+
+function sync_getacademicperiodids_fromomega_toarray ()
+{
+    global $CFG;
+
+    $periods = sync_getacademicperiodids_fromomega();
+    $academicids = array();
+    if (count($periods) > 0) {
+        foreach ($periods as $period) {
+            $periodrow = array();
+            array_push($periodrow, $period->periodoAcademicoId);
+            array_push($periodrow, $period->unidadAcademicaId);
+            array_push($periodrow, $period->periodoAcademico);
+            array_push($periodrow, $period->sede);
+            array_push($periodrow, $period->estado);
+            array_push($periodrow, $period->AnoPeriodo);
+            array_push($periodrow, $period->NumeroPeriodo);
+            array_push($periodrow, $period->tipo);
+
+            array_push($academicids, $periodrow);
+        }
+
+    }
+    return $academicids;
 }
 
 function sync_tabs() {
@@ -725,4 +764,231 @@ function validateEmarkingError () {
 
     return $courseproblems;
 
+}
+
+function sync_omega ($options = null) {
+
+    $result = true;
+
+    // clear tables from desactivated academic periods
+    sync_clear_academic_periods ($options);
+    sync_sincronize_current_periods ($options);
+
+    return $result;
+
+}
+
+function sync_clear_academic_periods ($options) {
+    // Get all ID from each academic period with status is inactive
+    $periods = getacademicperiods ($options, 0);
+    $academicids = getacademicperiodsid($periods);
+
+    // clear sync tables from inactive academicids
+    sync_clear_academicid_tables ($academicids, $options);
+}
+
+function getacademicperiodsid ($periods) {
+    $academicids = array();
+    if(count($periods) > 0){
+        foreach($periods as $period) {
+            $academicids[] = $period->academicperiodid;
+        }
+        return $academicids;
+    }else{
+        return false;
+    }
+}
+
+function sync_clear_academicid_tables ($academicids, $options) {
+    if ($academicids) {
+        foreach ($academicids as $academicid) {
+            sync_delete_course_table ($academicid, $options);
+            sync_delete_users_table ($academicid, $options);
+        }
+    }
+}
+
+function sync_delete_course_table ($academicid, $options) {
+    global $DB;
+
+    // Clean table courses from the current academic period
+    if ($options['debug'] == true) mtrace("Borrando cursos de la bdd externa");
+    if (!$DB->execute("DELETE FROM {sync_course} where shortname like '" . $academicid . "-%'")) mtrace("DELETE Table sync_course academicperiodid = " . $academicid . ": Failed");
+    else mtrace("DELETE Table sync_course academicperiodid = " . $academicid . ": Success");
+}
+
+function sync_delete_users_table ($academicid, $options) {
+    global $DB;
+
+    // Clean table Users from the current academic period
+    if ($options['debug'] == true) mtrace("Borrando usuarios de la bdd externa");
+    if (!$DB->execute("DELETE FROM {sync_enrol} where course like '" . $academicid . "-%'")) mtrace("DELETE Table sync_enrol academicperiodid = " . $academicid . ": Failed");
+    else mtrace("DELETE Table sync_enrol academicperiodid = " . $academicid . ": Success");
+}
+
+function sync_truncate_course_table ($options) {
+    global $DB;
+
+    // Clean table courses from the current academic period
+    if ($options['debug'] == true) mtrace("Borrando cursos de la bdd externa");
+    if (!$DB->execute("TRUNCATE TABLE {sync_course}")) mtrace("Truncate Table sync_course Failed");
+    else mtrace("Truncate Table sync_course Success");
+}
+
+function sync_truncate_users_table ($options) {
+    global $DB;
+
+    // Clean table Users from the current academic period
+    if ($options['debug'] == true) mtrace("Borrando usuarios de la bdd externa");
+    if (!$DB->execute("TRUNCATE TABLE {sync_enrol}")) mtrace("Truncate Table sync_enrol Failed");
+    else mtrace("Truncate Table sync_enrol Success");
+}
+
+function get_period_fromomega_key ($academicid, $periodosfromomega) {
+
+    $keyid = 0;
+    // echo $academicid;
+    // print_r($periodosfromomega);
+    foreach ($periodosfromomega as $key => $period) {
+        if ($period[0] == $academicid) $keyid = $key;
+    }
+    return $keyid;
+}
+
+function sync_sincronize_current_periods ($options) {
+    global $DB, $CFG;
+    $error = 0;
+
+    $periodosfromomega = sync_getacademicperiodids_fromomega_toarray();
+    list($academicids, $syncinfo) = sync_getacademicperiod($options['academicperiodid']);
+
+    // Check we have
+    if ($academicids) {
+
+        foreach ($academicids as $academicid) {
+
+            if ($options['debug'] == true) mtrace("\n\nSincronizando periodo academico: {$academicid} - " . date("F j, Y, G:i:s"));
+            $key = get_period_fromomega_key ($academicid, $periodosfromomega);
+            mtrace ("The key is {$key}");
+
+            if ($key > 0) $syncinfo[$academicid]["activeperiod"] = 1;
+            else $syncinfo[$academicid]["activeperiod"] = 0;
+            $syncinfo[$academicid]["error"] = 0;
+
+            // ******************* get courses from omega ************************
+            list($courses, $syncinfo) = sync_getcourses_fromomega($academicid, $syncinfo, $options["debug"]);
+            if (count($courses) > 0) {
+                sync_delete_course_table ($academicid, $options);
+                mtrace ("Inserting courses into courses table");
+                $DB->insert_records("sync_course", $courses);
+            } else {
+                // **************** add validation *******************
+                if ($syncinfo[$academicid]["activeperiod"] == 1) $syncinfo[$academicid]["error"] = 1;
+                else $syncinfo[$academicid]["error"] = 0;
+            }
+
+            // ********************* Get users from omega **********************
+            list($users, $metausers, $syncinfo) = sync_getusers_fromomega($academicid, $syncinfo, $options["debug"]);
+            if ($users > 0) {
+                sync_delete_users_table ($academicid, $options);
+                mtrace ("Inserting users into enrol table");
+                $DB->insert_records("sync_enrol", $users); // Insert users into enrol table
+                mtrace ("Users inserted");
+
+                mtrace ("Inserting metausers into courses table");
+                $DB->insert_records("sync_enrol", $metausers); // Insert meta-users into enrol table
+                mtrace ("users inserted");
+            } else {
+                // **************** add validation *******************
+                if ($syncinfo[$academicid]["activeperiod"] == 1) $syncinfo[$academicid]["error"] = 1;
+                else $syncinfo[$academicid]["error"] = 0;
+            }
+        }
+
+        print_r($syncinfo);
+        // *************************** Sync History table *************************
+        sync_add_to_history ($syncinfo, $options);
+        $syncfail = sync_get_failed_periods ($syncinfo, $options);
+
+    }
+    else {
+        mtrace("No se encontraron Periodos académicos activos para sincronizar.");
+
+        if ($options['academicperiodid'] > 0) {
+            sync_delete_course_table ($options['academicperiodid'], $options); // Delete Only the param academic period
+            sync_delete_users_table ($options['academicperiodid'], $options); // Delete previous enrol
+        }
+        else {
+            sync_truncate_course_table($options);
+            sync_truncate_users_table ($options);
+        }
+    }
+
+    // Validate emarking grading methods error
+    mtrace("************* Validate Emarking Error **************");
+    $courseproblems = validateEmarkingError();
+    if (count($courseproblems) > 0) mtrace ("Se encontraron " . count($courseproblems) . " errores de Emarking\n");
+    else mtrace ("No se encontraron errores de Emarking\n");
+
+    // Add Script to get list o users who will receive the mail
+    $userlist = sync_get_users_email_list();
+    if (count($syncfail) > 0 || count($courseproblems) > 0) $error = 1;
+
+    mtrace("Enviando correos a usuarios");
+    sync_sendmail($userlist, $syncfail, $courseproblems, $error);
+
+
+}
+
+function sync_add_to_history ($syncinfo, $options) {
+    global $DB;
+
+    // insert records in sync_history
+    $historyrecords = array();  // history records array
+    $time = time();
+    foreach ($syncinfo as $academic => $rowinfo) {
+
+        // record current row
+        $insert = new stdClass();
+        $insert->dataid = $rowinfo["dataid"];
+        $insert->executiondate = $time;
+        $insert->countcourses = $rowinfo["course"];
+        $insert->countenrols = $rowinfo["enrol"];
+
+        if ($academic > 0) $historyrecords[] = $insert; // add current record to history record array
+
+        if ($options["debug"]) mtrace("Academic Period ".$academic.", Total courses ".$rowinfo["course"].", Total enrol ".$rowinfo["enrol"]."\n");
+    }
+
+    // save history records array into sync history table
+    $DB->insert_records("sync_history", $historyrecords);
+}
+
+function sync_get_failed_periods ($syncinfo, $options) {
+    global $DB;
+
+    // insert records in sync_history
+    $syncfail = array(); // sync fail array
+    foreach ($syncinfo as $academic => $rowinfo) {
+        if (($academic > 0) && ($rowinfo["course"] == 0 || $rowinfo["enrol"] == 0)) {
+            array_push($syncfail,array($academic, $rowinfo["course"], $rowinfo["enrol"]));
+        }
+    }
+    return $syncfail;
+}
+
+function sync_get_users_email_list () {
+    global $DB, $CFG;
+
+    $userlist = array();
+    $mails = explode("," ,$CFG->sync_mailalert);
+    foreach ($mails as $mail) {
+        $sqlmail = "Select id From {user} where username = ?";
+        $usercfg = $DB->get_records_sql($sqlmail,array($mail));
+        foreach ($usercfg as $user) {
+            array_push($userlist, $user->id);
+        }
+    }
+
+    return $userlist;
 }
