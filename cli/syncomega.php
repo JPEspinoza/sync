@@ -30,6 +30,7 @@ define('CLI_SCRIPT', true); // Comment this line to execute on web
 require_once(dirname(dirname(dirname(dirname(__FILE__)))) . "/config.php");
 require_once($CFG->dirroot . "/local/sync/locallib.php");
 require_once($CFG->libdir . '/clilib.php');
+require_once($CFG->dirroot . '/course/lib.php');
 
 global $DB, $CFG;
 
@@ -81,7 +82,9 @@ mtrace("Validation complete, continue... \n");
 
 // start sync from omega
 $result = sync_omega($options);
-exit(0);
+if ($result > 0) {
+    exit(0);
+}
 
 // Add External BDD Enrolments to this cli
 mtrace("******************** Starting External Database Enrol ********************");

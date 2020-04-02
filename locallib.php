@@ -622,7 +622,7 @@ function sync_records_tabs() {
 	return $tabs;
 }
 
-function sync_sendmail($userlist, $syncFail, $courseproblems, $error) {
+function sync_sendmail($userlist, $syncfail, $fixedcourses, $error, $type = 0) {
     GLOBAL $CFG, $USER, $DB;
     $userfrom = core_user::get_noreply_user();
     $userfrom->maildisplay = true;
@@ -632,42 +632,62 @@ function sync_sendmail($userlist, $syncFail, $courseproblems, $error) {
 
         //subject
         $eventdata->subject = "Get academic period sync error";
-        $messagehtml = "<html>".
-            "<p>Estimado: usuario,</p>".
-            "<p>Se ha completado la tarea de sincronización: " . date('d/m/Y h:i:s a', time()). "</p>".
-            "<p><b>Errores de Sincronización:</b></p>".
-            "<p>#DATAHERE#</p>".
-            "<p><b>Errores de Emarking:</b></p>".
-            "<p>#DATAHERECOURSES#</p>".
-            "<p>Atentamente,</p>".
-            "<p>Equipo de WebCursos</p>".
-        "</html>";
+        if ($type == 0) {
 
-        $messagetext = "<p>Estimado: usuario,</p>".
-            "<p>Se ha completado la tarea de sincronización: " . date('d/m/Y h:i:s a', time()). "</p>".
-            "<p><b>Errores de Sincronización:</b></p>".
-            "<p>#DATAHERE#</p>".
-            "<p><b>Errores de Emarking:</b></p>".
-            "<p>#DATAHERECOURSES#</p>".
-            "<p>Atentamente,</p>".
-            "<p>Equipo de WebCursos</p>";
+            $messagehtml = "<html>".
+                "<p>Estimado: usuario,</p>".
+                "<p>Se ha completado la tarea de sincronización: " . date('d/m/Y h:i:s a', time()). "</p>".
+                "<p><b>Errores de Sincronización:</b></p>".
+                "<p>#DATAHERE#</p>".
+                "<p><b>Corrección de Cursos:</b></p>".
+                "<p>#DATACOURSES#</p>".
+                "<p>Atentamente,</p>".
+                "<p>Equipo de WebCursos</p>".
+                "</html>";
 
-        if ($error == 1) {
-            $messagehtml = str_replace("#DATAHERE#", sync_htmldata($syncFail), $messagehtml);
-            $messagetext = str_replace("#DATAHERE#", sync_htmldata($syncFail), $messagetext);
+            $messagetext = "<p>Estimado: usuario,</p>".
+                "<p>Se ha completado la tarea de sincronización: " . date('d/m/Y h:i:s a', time()). "</p>".
+                "<p><b>Errores de Sincronización:</b></p>".
+                "<p>#DATAHERE#</p>".
+                "<p><b>Corrección de Cursos:</b></p>".
+                "<p>#DATACOURSES#</p>".
+                "<p>Atentamente,</p>".
+                "<p>Equipo de WebCursos</p>";
 
-            $messagehtml = str_replace("#DATAHERECOURSES#", sync_htmldatacourses($courseproblems), $messagehtml);
-            $messagetext = str_replace("#DATAHERECOURSES#", sync_htmldatacourses($courseproblems), $messagetext);
+            if ($error == 1) {
+                $messagehtml = str_replace("#DATAHERE#", sync_htmldata($syncfail), $messagehtml);
+                $messagetext = str_replace("#DATAHERE#", sync_htmldata($syncfail), $messagetext);
+            }
+            else {
+                $messagehtml = str_replace("#DATAHERE#", "", $messagehtml);
+                $messagetext = str_replace("#DATAHERE#", "", $messagetext);
+            }
+
+            if (count($fixedcourses) > 0) {
+                $messagehtml = str_replace("#DATACOURSES#", sync_htmldata($fixedcourses), $messagehtml);
+                $messagetext = str_replace("#DATACOURSES#", sync_htmldata($fixedcourses), $messagetext);
+            }
+            else {
+                $messagehtml = str_replace("#DATACOURSES#", "", $messagehtml);
+                $messagetext = str_replace("#DATACOURSES#", "", $messagetext);
+            }
+        } else {
+
+            $messagehtml = "<html>".
+                "<p>Estimado: usuario,</p>".
+                "<p>Se ha cancelado la tarea de sincronización: " . date('d/m/Y h:i:s a', time()). "</p>".
+                "<p><b>No se detectaron los servicios de Omega activos.</b></p>".
+                "<p>Atentamente,</p>".
+                "<p>Equipo de WebCursos</p>".
+                "</html>";
+
+            $messagetext = "<p>Estimado: usuario,</p>".
+                "<p>Se ha completado la tarea de sincronización: " . date('d/m/Y h:i:s a', time()). "</p>".
+                "<p><b>No se detectaron los servicios de Omega activos.</b></p>".
+                "<p>Atentamente,</p>".
+                "<p>Equipo de WebCursos</p>";
+
         }
-        else {
-            $messagehtml = str_replace("#DATAHERE#", "", $messagehtml);
-            $messagetext = str_replace("#DATAHERE#", "", $messagetext);
-
-            $messagehtml = str_replace("#DATAHERECOURSES#", "", $messagehtml);
-            $messagetext = str_replace("#DATAHERECOURSES#", "", $messagetext);
-        }
-
-
 
         $eventdata->component = "local_sync"; // your component name
         $eventdata->name = "sync_notification"; // this is the message name from messages.php
@@ -704,6 +724,7 @@ function sync_htmldata ($syncFail) {
     return $table;
 }
 
+/* Deprecated */
 function sync_htmldatacourses($courseproblems) {
     $table = "";
 
@@ -716,6 +737,7 @@ function sync_htmldatacourses($courseproblems) {
     return $table;
 }
 
+/* Deprecated */
 function validateEmarkingError () {
 
     global $OUTPUT, $DB;
@@ -769,12 +791,24 @@ function validateEmarkingError () {
 function sync_omega ($options = null) {
 
     $result = true;
+    $error = 0;
 
-    // clear tables from desactivated academic periods
-    sync_clear_academic_periods ($options);
-    sync_sincronize_current_periods ($options);
+    sync_clear_academic_periods ($options); // clear tables from desactivated academic periods
+    if (count(sync_getacademicperiodids_fromomega()) == 0) {
+        sync_generate_mail($options, null, null, 1, 1);
+        return 1; // Omega Services not working - abort
+    }
+    $syncinfo = sync_sincronize_current_periods ($options);
+    $syncfail = sync_get_failed_periods ($syncinfo, $options);
+    if (count($syncfail) > 0) $error = 1;
 
-    return $result;
+    // Validate emarking grading methods error (Deprecated - Fixed on emarking plugin)
+
+    // Fix courses fullname and shortname
+    $fixedcourses = sync_fix_created_courses($options);
+
+    sync_generate_mail($options, $syncfail, $fixedcourses, $error);
+    return $error;
 
 }
 
@@ -857,7 +891,6 @@ function get_period_fromomega_key ($academicid, $periodosfromomega) {
 
 function sync_sincronize_current_periods ($options) {
     global $DB, $CFG;
-    $error = 0;
 
     $periodosfromomega = sync_getacademicperiodids_fromomega_toarray();
     list($academicids, $syncinfo) = sync_getacademicperiod($options['academicperiodid']);
@@ -884,7 +917,6 @@ function sync_sincronize_current_periods ($options) {
             } else {
                 // **************** add validation *******************
                 if ($syncinfo[$academicid]["activeperiod"] == 1) $syncinfo[$academicid]["error"] = 1;
-                else $syncinfo[$academicid]["error"] = 0;
             }
 
             // ********************* Get users from omega **********************
@@ -901,14 +933,13 @@ function sync_sincronize_current_periods ($options) {
             } else {
                 // **************** add validation *******************
                 if ($syncinfo[$academicid]["activeperiod"] == 1) $syncinfo[$academicid]["error"] = 1;
-                else $syncinfo[$academicid]["error"] = 0;
             }
         }
 
-        print_r($syncinfo);
+        // print_r($syncinfo);
         // *************************** Sync History table *************************
         sync_add_to_history ($syncinfo, $options);
-        $syncfail = sync_get_failed_periods ($syncinfo, $options);
+
 
     }
     else {
@@ -924,19 +955,7 @@ function sync_sincronize_current_periods ($options) {
         }
     }
 
-    // Validate emarking grading methods error
-    mtrace("************* Validate Emarking Error **************");
-    $courseproblems = validateEmarkingError();
-    if (count($courseproblems) > 0) mtrace ("Se encontraron " . count($courseproblems) . " errores de Emarking\n");
-    else mtrace ("No se encontraron errores de Emarking\n");
-
-    // Add Script to get list o users who will receive the mail
-    $userlist = sync_get_users_email_list();
-    if (count($syncfail) > 0 || count($courseproblems) > 0) $error = 1;
-
-    mtrace("Enviando correos a usuarios");
-    sync_sendmail($userlist, $syncfail, $courseproblems, $error);
-
+    return ($syncinfo);
 
 }
 
@@ -967,10 +986,10 @@ function sync_add_to_history ($syncinfo, $options) {
 function sync_get_failed_periods ($syncinfo, $options) {
     global $DB;
 
-    // insert records in sync_history
     $syncfail = array(); // sync fail array
     foreach ($syncinfo as $academic => $rowinfo) {
-        if (($academic > 0) && ($rowinfo["course"] == 0 || $rowinfo["enrol"] == 0)) {
+        //if (($academic > 0) && ($rowinfo["course"] == 0 || $rowinfo["enrol"] == 0)) {
+        if ($academic > 0 && $rowinfo["error"] == 1) {
             array_push($syncfail,array($academic, $rowinfo["course"], $rowinfo["enrol"]));
         }
     }
@@ -991,4 +1010,65 @@ function sync_get_users_email_list () {
     }
 
     return $userlist;
+}
+
+function sync_fix_created_courses($options) {
+    $fixedcourses = sync_fix_courses($options);
+    return array($fixedcourses);
+}
+
+function sync_fix_courses($options) {
+    global $DB, $CFG;
+
+    $errorlist = sync_get_courses_to_fix($options);
+    if (count($errorlist) > 0) {
+        $errorlist = sync_fix_courses_update($errorlist, $options);
+    }
+    else {
+        mtrace ("No course problems detected");
+    }
+    return $errorlist;
+}
+
+function sync_get_courses_to_fix($options) {
+    global $DB;
+
+    $sql = "select s.shortname as syncshortname, s.fullname as syncfullname, c.id, c.shortname as courseshortname, c.fullname as coursefullname
+    from mdl_sync_course s
+    join mdl_course c on c.idnumber = s.idnumber AND (c.shortname != s.shortname OR s.fullname != c.fullname)";
+    $regs = $DB->get_records_sql($sql);
+
+    return $regs;
+}
+
+function sync_fix_courses_update($errorlist, $options) {
+    global $DB;
+
+    foreach ($errorlist as $coursetofix) {
+        // Get course info to fix
+        $course = $DB->get_records("course", array("id" => $coursetofix->id));
+        $course = $course[$coursetofix->id];
+
+        // Validating and changing shortname and fullname if necesary
+        if ($course->shortname != $coursetofix->syncshortname) $course->shortname = $coursetofix->syncshortname;
+        if ($course->fullname != $coursetofix->syncfullname) $course->fullname = $coursetofix->syncfullname;
+        update_course($course); // course/lib.php // Execute update
+
+        // Validate change
+        $course = $DB->get_records("course", array("id" => $coursetofix->id));
+        $course = $course[$coursetofix->id];
+
+        if ($course->shortname == $coursetofix->syncshortname && $course->fullname == $coursetofix->syncfullname) $coursetofix->fixed = 1;
+        else $coursetofix->fixed = 0;
+    }
+
+    return $errorlist;
+
+}
+
+function sync_generate_mail($options, $syncfail = null, $fixedcourses = null, $error, $type = 0) {
+    mtrace("Enviando correos a usuarios");
+    // Add Script to get list o users who will receive the mail
+    $userlist = sync_get_users_email_list();
+    sync_sendmail($userlist, $syncfail, $fixedcourses, $error, $type);
 }
