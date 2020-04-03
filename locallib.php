@@ -1044,6 +1044,7 @@ function sync_get_courses_to_fix($options) {
 function sync_fix_courses_update($errorlist, $options) {
     global $DB;
 
+    mtrace ("Fixing courses names and shortnames");
     foreach ($errorlist as $coursetofix) {
         // Get course info to fix
         $course = $DB->get_records("course", array("id" => $coursetofix->id));
@@ -1052,7 +1053,14 @@ function sync_fix_courses_update($errorlist, $options) {
         // Validating and changing shortname and fullname if necesary
         if ($course->shortname != $coursetofix->syncshortname) $course->shortname = $coursetofix->syncshortname;
         if ($course->fullname != $coursetofix->syncfullname) $course->fullname = $coursetofix->syncfullname;
-        update_course($course); // course/lib.php // Execute update
+        try {
+            mtrace ("Fixing course {$coursetofix->id} with shortname: {$coursetofix->syncshortname} and fullname: {$coursetofix->syncfullname}");
+            update_course($course); // course/lib.php // Execute update
+            mtrace ("Fix completed");
+        } catch (Exception $e) {
+                mtrace('Excepción capturada: ',  $e->getMessage());
+        }
+
 
         // Validate change
         $course = $DB->get_records("course", array("id" => $coursetofix->id));
@@ -1061,6 +1069,7 @@ function sync_fix_courses_update($errorlist, $options) {
         if ($course->shortname == $coursetofix->syncshortname && $course->fullname == $coursetofix->syncfullname) $coursetofix->fixed = 1;
         else $coursetofix->fixed = 0;
     }
+    mtrace ("End Fixing courses names and shortnames");
 
     return $errorlist;
 
