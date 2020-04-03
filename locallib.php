@@ -724,14 +724,15 @@ function sync_htmldata ($syncFail) {
     return $table;
 }
 
-function sync_htmldatacourses($fixedcourses) {
+function sync_htmldatacourses ($fixedcourses) {
     $table = "";
-
+    print_r($fixedcourses);
     if (count($fixedcourses) > 0) {
-        foreach ($fixedcourses as $fixedcourse){
+        foreach ($fixedcourses as $course) {
+            print_r($course);
             $fix = "No";
-            if ($fixedcourse->fixed > 0) $fix = "Sí";
-            $table .= "<p><b>CourseId:</b> {$fixedcourse->id} - <b>Shortname:</b> {$fixedcourse->syncshortname} - <b>Fullname:</b> {$fixedcourse->syncfullname} - <b>Result:</b> {$fix}</p>";
+            if ($course->fixed > 0) $fix = "Sí";
+            $table .= "<p><b>Id:</b> {$course->id} - <b>Shortname:</b> {$course->syncshortname} - <b>Fullname:</b> {$course->syncfullname} - <b>Result:</b> {$fix}</p>";
         }
     }
 
@@ -807,8 +808,7 @@ function sync_omega ($options = null) {
 
     // Fix courses fullname and shortname
     $fixedcourses = sync_fix_created_courses($options);
-    print_r($fixedcourses);
-
+    
     sync_generate_mail($options, $syncfail, $fixedcourses, $error);
     return $error;
 
@@ -1077,7 +1077,7 @@ function sync_fix_courses_update($errorlist, $options) {
 
 }
 
-function sync_generate_mail($options, $syncfail = null, $fixedcourses = null, $error, $type = 0) {
+function sync_generate_mail($options, $syncfail, $fixedcourses, $error, $type = 0) {
     mtrace("Enviando correos a usuarios");
     // Add Script to get list o users who will receive the mail
     $userlist = sync_get_users_email_list();
