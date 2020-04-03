@@ -663,7 +663,7 @@ function sync_sendmail($userlist, $syncfail, $fixedcourses, $error, $type = 0) {
                 $messagetext = str_replace("#DATAHERE#", "", $messagetext);
             }
 
-            if (count($fixedcourses) > 0) {
+            if (count($fixedcourses[]) > 0) {
                 $messagehtml = str_replace("#DATACOURSES#", sync_htmldatacourses($fixedcourses), $messagehtml);
                 $messagetext = str_replace("#DATACOURSES#", sync_htmldatacourses($fixedcourses), $messagetext);
             }
@@ -726,9 +726,9 @@ function sync_htmldata ($syncFail) {
 
 function sync_htmldatacourses ($fixedcourses) {
     $table = "";
-    print_r($fixedcourses);
-    if (count($fixedcourses) > 0) {
-        foreach ($fixedcourses as $course) {
+    print_r($fixedcourses[0]);
+    if (count($fixedcourses[0]) > 0) {
+        foreach ($fixedcourses[0] as $course) {
             print_r($course);
             $fix = "No";
             if ($course->fixed > 0) $fix = "Sí";
@@ -808,7 +808,7 @@ function sync_omega ($options = null) {
 
     // Fix courses fullname and shortname
     $fixedcourses = sync_fix_created_courses($options);
-    
+
     sync_generate_mail($options, $syncfail, $fixedcourses, $error);
     return $error;
 
