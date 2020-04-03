@@ -664,8 +664,8 @@ function sync_sendmail($userlist, $syncfail, $fixedcourses, $error, $type = 0) {
             }
 
             if (count($fixedcourses) > 0) {
-                $messagehtml = str_replace("#DATACOURSES#", sync_htmldata($fixedcourses), $messagehtml);
-                $messagetext = str_replace("#DATACOURSES#", sync_htmldata($fixedcourses), $messagetext);
+                $messagehtml = str_replace("#DATACOURSES#", sync_htmldatacourses($fixedcourses), $messagehtml);
+                $messagetext = str_replace("#DATACOURSES#", sync_htmldatacourses($fixedcourses), $messagetext);
             }
             else {
                 $messagehtml = str_replace("#DATACOURSES#", "", $messagehtml);
@@ -724,13 +724,12 @@ function sync_htmldata ($syncFail) {
     return $table;
 }
 
-/* Deprecated */
-function sync_htmldatacourses($courseproblems) {
+function sync_htmldatacourses($fixedcourses) {
     $table = "";
 
-    if (count($courseproblems) > 0) {
-        foreach ($courseproblems as $problem){
-            $table .= "<p><b>CourseId:</b> {$problem[0]} - <b>Shortname:</b> {$problem[1]} - <b>Emarking:</b> {$problem[2]} - <b>FechaCreación:</b> {$problem[3]}</p>";
+    if (count($fixedcourses) > 0) {
+        foreach ($fixedcourses as $fixedcourse){
+            $table .= "<p><b>CourseId:</b> {$fixedcourse->id} - <b>Shortname:</b> {$fixedcourse->syncshortname} - <b>Fullname:</b> {$fixedcourse->syncfullname}</p>";
         }
     }
 
