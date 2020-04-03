@@ -729,7 +729,9 @@ function sync_htmldatacourses($fixedcourses) {
 
     if (count($fixedcourses) > 0) {
         foreach ($fixedcourses as $fixedcourse){
-            $table .= "<p><b>CourseId:</b> {$fixedcourse->id} - <b>Shortname:</b> {$fixedcourse->syncshortname} - <b>Fullname:</b> {$fixedcourse->syncfullname}</p>";
+            $fix = "No";
+            if ($fixedcourse->fixed > 0) $fix = "Sí";
+            $table .= "<p><b>CourseId:</b> {$fixedcourse->id} - <b>Shortname:</b> {$fixedcourse->syncshortname} - <b>Fullname:</b> {$fixedcourse->syncfullname} - <b>Result:</b> {$fix}</p>";
         }
     }
 
