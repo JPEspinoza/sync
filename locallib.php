@@ -1058,7 +1058,7 @@ function sync_fix_courses_update($errorlist, $options) {
             update_course($course); // course/lib.php // Execute update
             mtrace ("Fix completed");
         } catch (Exception $e) {
-                mtrace('Excepción capturada: ',  $e->getMessage());
+                mtrace("Excepción capturada: {$e->getMessage()}");
         }
 
 
