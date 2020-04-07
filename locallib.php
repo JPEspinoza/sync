@@ -601,7 +601,7 @@ function sync_records_tabs() {
 	return $tabs;
 }
 
-function sync_sendmail($options, $userlist, $error, $syncfail = null, $fixedcourses = null, $type = 0) {
+function sync_sendmail($options, $userlist, $error, $syncfail, $fixedcourses, $type = 0) {
     GLOBAL $CFG, $USER, $DB;
     $userfrom = core_user::get_noreply_user();
     $userfrom->maildisplay = true;
@@ -1092,7 +1092,7 @@ function sync_fix_courses_update($errorlist, $options) {
 
 }
 
-function sync_generate_mail($options, $error, $syncfail = null, $fixedcourses = null, $type = 0) {
+function sync_generate_mail($options, $error, $syncfail, $fixedcourses, $type = 0) {
     mtrace("Enviando correos a usuarios");
     // Add Script to get list o users who will receive the mail
     $userlist = sync_get_users_email_list();
