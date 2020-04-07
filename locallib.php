@@ -737,7 +737,8 @@ function sync_sendmail($options, $userlist, $error, $syncfail, $fixedcourses, $t
 
 function sync_htmldata ($options, $syncFail) {
     $table = "";
-    if ($options['debug']) print_r($syncFail);
+
+    print_r($syncFail);
     if (count($syncFail) > 0) {
         foreach ($syncFail as $fails) {
             $table .= "<p><b>Periodo Académico:</b> {$fails[0]} - <b>Cursos Sincronizados:</b> {$fails[1]} - <b>Enrols Totales:</b> {$fails[2]}</p>";
@@ -749,7 +750,8 @@ function sync_htmldata ($options, $syncFail) {
 
 function sync_htmldatacourses ($options, $fixedcourses) {
     $table = "";
-    if ($options['debug']) print_r($fixedcourses);
+
+    print_r($fixedcourses);
     if (count($fixedcourses[0]) > 0) {
         foreach ($fixedcourses[0] as $course) {
             $fix = "No";
