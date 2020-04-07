@@ -833,6 +833,10 @@ function sync_omega ($options = null) {
     // Fix courses fullname and shortname
     $fixedcourses = sync_fix_created_courses($options);
 
+    print_r($syncfail);
+
+    print_r($fixedcourses);
+
     sync_generate_mail($options, $error, $syncfail, $fixedcourses);
     return $error;
 
