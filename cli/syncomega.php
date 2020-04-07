@@ -85,6 +85,7 @@ $result = sync_omega($options);
 if ($result > 0) {
     exit(0);
 }
+exit(0);
 
 // Add External BDD Enrolments to this cli
 mtrace("******************** Starting External Database Enrol ********************");
