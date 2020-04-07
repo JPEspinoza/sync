@@ -601,12 +601,15 @@ function sync_records_tabs() {
 	return $tabs;
 }
 
-function sync_sendmail($options, $userlist, $syncfail = null, $fixedcourses = null, $error, $type = 0) {
+function sync_sendmail($options = null, $userlist, $syncfail = null, $fixedcourses = null, $error, $type = 0) {
     GLOBAL $CFG, $USER, $DB;
     $userfrom = core_user::get_noreply_user();
     $userfrom->maildisplay = true;
     $messagehtml = "";
     $subject = "";
+
+    if ($options['debug']) print_r($syncfail);
+    if ($options['debug']) print_r($fixedcourses);
 	
 	foreach ($userlist as $user){
         $eventdata = new \core\message\message();
@@ -735,7 +738,7 @@ function sync_sendmail($options, $userlist, $syncfail = null, $fixedcourses = nu
     }
 }
 
-function sync_htmldata ($options, $syncFail) {
+function sync_htmldata ($options = null, $syncFail) {
     $table = "";
     if ($options['debug']) print_r($syncFail);
     if (count($syncFail) > 0) {
@@ -747,7 +750,7 @@ function sync_htmldata ($options, $syncFail) {
     return $table;
 }
 
-function sync_htmldatacourses ($options, $fixedcourses) {
+function sync_htmldatacourses ($options = null, $fixedcourses) {
     $table = "";
     if ($options['debug']) print_r($fixedcourses);
     if (count($fixedcourses[0]) > 0) {
@@ -1092,7 +1095,7 @@ function sync_fix_courses_update($errorlist, $options) {
 
 }
 
-function sync_generate_mail($options, $syncfail = null, $fixedcourses = null , $error, $type = 0) {
+function sync_generate_mail($options = null, $syncfail = null, $fixedcourses = null , $error, $type = 0) {
     mtrace("Enviando correos a usuarios");
     // Add Script to get list o users who will receive the mail
     $userlist = sync_get_users_email_list();
