@@ -607,9 +607,6 @@ function sync_sendmail($options = null, $userlist, $syncfail = null, $fixedcours
     $userfrom->maildisplay = true;
     $messagehtml = "";
     $subject = "";
-
-    if ($options['debug']) print_r($syncfail);
-    if ($options['debug']) print_r($fixedcourses);
 	
 	foreach ($userlist as $user){
         $eventdata = new \core\message\message();
