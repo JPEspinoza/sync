@@ -601,7 +601,7 @@ function sync_records_tabs() {
 	return $tabs;
 }
 
-function sync_sendmail($userlist, $syncfail = null, $fixedcourses = null, $error, $type = 0) {
+function sync_sendmail($userlist, $error, $syncfail = null, $fixedcourses = null, $type = 0) {
     GLOBAL $CFG, $USER, $DB;
     $userfrom = core_user::get_noreply_user();
     $userfrom->maildisplay = true;
@@ -681,14 +681,12 @@ function sync_sendmail($userlist, $syncfail = null, $fixedcourses = null, $error
             $messagehtml = "<html>".
                 "<p>Estimado/a: {$user[1]} {$user[2]},</p>".
                 "<p>Se ha completado la tarea de sincronización por bdd externa: " . date('d/m/Y h:i:s a', time()). "</p>".
-                "<p><b>No se detectaron los servicios de Omega activos.</b></p>".
                 "<p>Atentamente,</p>".
                 "<p>Equipo de WebCursos</p>".
                 "</html>";
 
             $messagetext = "<p>Estimado/a: {$user[1]} {$user[2]},</p>".
                 "<p>Se ha completado la tarea de sincronización por bdd externa: " . date('d/m/Y h:i:s a', time()). "</p>".
-                "<p><b>No se detectaron los servicios de Omega activos.</b></p>".
                 "<p>Atentamente,</p>".
                 "<p>Equipo de WebCursos</p>";
 
@@ -832,7 +830,7 @@ function sync_omega ($options = null) {
     // Fix courses fullname and shortname
     $fixedcourses = sync_fix_created_courses($options);
 
-    sync_generate_mail($options, $syncfail, $fixedcourses, $error);
+    sync_generate_mail($options, $error, $syncfail, $fixedcourses);
     return $error;
 
 }
@@ -1093,9 +1091,9 @@ function sync_fix_courses_update($errorlist, $options) {
 
 }
 
-function sync_generate_mail($options, $syncfail = null, $fixedcourses = null , $error, $type = 0) {
+function sync_generate_mail($options, $error, $syncfail = null, $fixedcourses = null, $type = 0) {
     mtrace("Enviando correos a usuarios");
     // Add Script to get list o users who will receive the mail
     $userlist = sync_get_users_email_list();
-    sync_sendmail($userlist, $syncfail, $fixedcourses, $error, $type);
+    sync_sendmail($userlist, $error, $syncfail, $fixedcourses, $type);
 }
