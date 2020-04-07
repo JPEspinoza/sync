@@ -753,8 +753,10 @@ function sync_htmldata ($options = null, $syncFail) {
 function sync_htmldatacourses ($options = null, $fixedcourses) {
     $table = "";
     if ($options['debug']) print_r($fixedcourses);
+    mtrace (count($fixedcourses));
     if (count($fixedcourses) > 0) {
         foreach ($fixedcourses as $course) {
+            if ($options['debug']) print_r($course);
             $fix = "No";
             if ($course->fixed > 0) $fix = "Sí";
             $table .= "<p><b>Id:</b> {$course->id} - <b>Shortname:</b> {$course->syncshortname} - <b>Fullname:</b> {$course->syncfullname} - <b>Result:</b> {$fix}</p>";
