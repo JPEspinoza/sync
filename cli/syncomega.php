@@ -90,7 +90,7 @@ if ($result > 0) {
 mtrace("******************** Starting External Database Enrol ********************");
 if (!enrol_is_enabled('database')) {
     cli_error('enrol_database plugin is disabled, synchronisation stopped', 2);
-    sync_generate_mail($options, 1, null, null, 3);
+    sync_generate_mail($options, null, null, 1, 3);
 }
 
 if (empty($options['verbose'])) {
