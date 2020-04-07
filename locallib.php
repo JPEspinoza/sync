@@ -647,7 +647,7 @@ function sync_sendmail($options = null, $userlist, $syncfail = null, $fixedcours
                 $messagetext = str_replace("#DATAHERE#", "", $messagetext);
             }
 
-            if (count($fixedcourses[0]) > 0) {
+            if (count($fixedcourses) > 0) {
                 $messagehtml = str_replace("#DATACOURSES#", sync_htmldatacourses($options, $fixedcourses), $messagehtml);
                 $messagetext = str_replace("#DATACOURSES#", sync_htmldatacourses($options, $fixedcourses), $messagetext);
             }
