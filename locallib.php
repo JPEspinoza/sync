@@ -601,7 +601,7 @@ function sync_records_tabs() {
 	return $tabs;
 }
 
-function sync_sendmail($userlist, $error, $syncfail = null, $fixedcourses = null, $type = 0) {
+function sync_sendmail($options, $userlist, $error, $syncfail = null, $fixedcourses = null, $type = 0) {
     GLOBAL $CFG, $USER, $DB;
     $userfrom = core_user::get_noreply_user();
     $userfrom->maildisplay = true;
@@ -636,8 +636,8 @@ function sync_sendmail($userlist, $error, $syncfail = null, $fixedcourses = null
                 "<p>Equipo de WebCursos</p>";
 
             if ($error == 1) {
-                $messagehtml = str_replace("#DATAHERE#", sync_htmldata($syncfail), $messagehtml);
-                $messagetext = str_replace("#DATAHERE#", sync_htmldata($syncfail), $messagetext);
+                $messagehtml = str_replace("#DATAHERE#", sync_htmldata($options, $syncfail), $messagehtml);
+                $messagetext = str_replace("#DATAHERE#", sync_htmldata($options, $syncfail), $messagetext);
             }
             else {
                 $messagehtml = str_replace("#DATAHERE#", "", $messagehtml);
@@ -645,8 +645,8 @@ function sync_sendmail($userlist, $error, $syncfail = null, $fixedcourses = null
             }
 
             if (count($fixedcourses[0]) > 0) {
-                $messagehtml = str_replace("#DATACOURSES#", sync_htmldatacourses($fixedcourses), $messagehtml);
-                $messagetext = str_replace("#DATACOURSES#", sync_htmldatacourses($fixedcourses), $messagetext);
+                $messagehtml = str_replace("#DATACOURSES#", sync_htmldatacourses($options, $fixedcourses), $messagehtml);
+                $messagetext = str_replace("#DATACOURSES#", sync_htmldatacourses($options, $fixedcourses), $messagetext);
             }
             else {
                 $messagehtml = str_replace("#DATACOURSES#", "", $messagehtml);
@@ -735,9 +735,9 @@ function sync_sendmail($userlist, $error, $syncfail = null, $fixedcourses = null
     }
 }
 
-function sync_htmldata ($syncFail) {
+function sync_htmldata ($options, $syncFail) {
     $table = "";
-
+    if ($options['debug']) print_r($syncFail);
     if (count($syncFail) > 0) {
         foreach ($syncFail as $fails) {
             $table .= "<p><b>Periodo Académico:</b> {$fails[0]} - <b>Cursos Sincronizados:</b> {$fails[1]} - <b>Enrols Totales:</b> {$fails[2]}</p>";
@@ -747,8 +747,9 @@ function sync_htmldata ($syncFail) {
     return $table;
 }
 
-function sync_htmldatacourses ($fixedcourses) {
+function sync_htmldatacourses ($options, $fixedcourses) {
     $table = "";
+    if ($options['debug']) print_r($fixedcourses);
     if (count($fixedcourses[0]) > 0) {
         foreach ($fixedcourses[0] as $course) {
             $fix = "No";
@@ -1095,5 +1096,5 @@ function sync_generate_mail($options, $error, $syncfail = null, $fixedcourses = 
     mtrace("Enviando correos a usuarios");
     // Add Script to get list o users who will receive the mail
     $userlist = sync_get_users_email_list();
-    sync_sendmail($userlist, $error, $syncfail, $fixedcourses, $type);
+    sync_sendmail($options, $userlist, $error, $syncfail, $fixedcourses, $type);
 }
