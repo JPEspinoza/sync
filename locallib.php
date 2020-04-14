@@ -712,6 +712,26 @@ function sync_sendmail($options = null, $userlist, $syncfail = null, $fixedcours
 
         }
 
+        if ($type == 4) {
+
+            $subject = "Sync External Database Error";
+
+            $messagehtml = "<html>".
+                "<p>Estimado/a: {$user[1]} {$user[2]},</p>".
+                "<p>Se ha cancelado la tarea de sincronización por bdd externa: " . date('d/m/Y h:i:s a', time()). "</p>".
+                "<p><b>Se detecto un error en el proceso sync_omega.</b></p>".
+                "<p>Atentamente,</p>".
+                "<p>Equipo de WebCursos</p>".
+                "</html>";
+
+            $messagetext = "<p>Estimado/a: {$user[1]} {$user[2]},</p>".
+                "<p>Se ha cancelado la tarea de sincronización por bdd externa: " . date('d/m/Y h:i:s a', time()). "</p>".
+                "<p><b>Se detecto un error en el proceso sync_omega.</b></p>".
+                "<p>Atentamente,</p>".
+                "<p>Equipo de WebCursos</p>";
+
+        }
+
         $eventdata->component = "local_sync"; // your component name
         $eventdata->name = "sync_notification"; // this is the message name from messages.php
         $eventdata->userfrom = $userfrom;
@@ -827,7 +847,7 @@ function sync_omega ($options = null) {
     $syncinfo = sync_sincronize_current_periods ($options);
     $syncfail = sync_get_failed_periods ($syncinfo, $options);
     if (count($syncfail) > 0) $error = 1;
-
+    sync_set_execution_status ($error);
     // Validate emarking grading methods error (Deprecated - Fixed on emarking plugin)
 
     // Fix courses fullname and shortname
@@ -1099,4 +1119,34 @@ function sync_generate_mail($options = null, $syncfail = null, $fixedcourses = n
     // Add Script to get list o users who will receive the mail
     $userlist = sync_get_users_email_list();
     sync_sendmail($options, $userlist, $syncfail, $fixedcourses, $error, $type);
+}
+
+function sync_set_execution_status ($error) {
+    global $DB;
+
+    // record current row
+    $insert = new stdClass();
+    $insert->executiondate = time();
+    $insert->result = $error;
+
+    $DB->insert_record("sync_result", $insert); // Insert sync result
+}
+
+function sync_get_execution_status ($id = 0) {
+    global $DB;
+
+    if ($id == 0) $id = sync_get_max_execution_id ();
+    $sql = "Select id, executiondate, result From {sync_result} where id = (select max(id) from {sync_result})";
+    $sqlstatus = $DB->get_records_sql($sql, null);
+
+    return $sqlstatus;
+}
+
+function sync_get_max_execution_id () {
+    global $DB;
+
+    $sql = "select max(id) from {sync_result}";
+    $sqlstatus = $DB->get_records_sql($sql, null);
+
+    return $sqlstatus->id;
 }

@@ -62,5 +62,15 @@
         <KEY NAME="dataid" TYPE="foreign" FIELDS="dataid" REFTABLE="sync_data" REFFIELDS="id" COMMENT="foreign key from the sync_data table"/>
       </KEYS>
     </TABLE>
+    <TABLE NAME="sync_result" COMMENT="Registers each synchronization result, storing the execution date">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="executiondate" TYPE="int" LENGTH="20" NOTNULL="true" SEQUENCE="false" COMMENT="Date in which the execution was done"/>
+        <FIELD NAME="result" TYPE="int" LENGTH="20" NOTNULL="true" SEQUENCE="false" COMMENT="sync result status"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+      </KEYS>
+    </TABLE>
   </TABLES>
 </XMLDB>

@@ -70,48 +70,6 @@ if ($options['help']) {
 cli_heading('Omega Sync'); // TODO: localize
 echo "\nStarting at ".date("F j, Y, G:i:s")."\n";
 
-// Validate Omega Services
-/*
-$result = sync_validateomega_services($options["debug"]);
-if ($result == false) {
-    mtrace("Error Validate Omega Services");
-    die();
-}
-mtrace("Validation complete, continue... \n");
-*/
-
-// start sync from omega
 $result = sync_omega($options);
-if ($result > 0) {
-    exit(0);
-}
-//exit(0);
-
-// Add External BDD Enrolments to this cli
-mtrace("******************** Starting External Database Enrol ********************");
-if (!enrol_is_enabled('database')) {
-    cli_error('enrol_database plugin is disabled, synchronisation stopped', 2);
-    sync_generate_mail($options, null, null, 1, 3);
-}
-
-if (empty($options['verbose'])) {
-    $trace = new null_progress_trace();
-} else {
-    $trace = new text_progress_trace();
-}
-
-//die;
-/** @var enrol_database_plugin $enrol  */
-$enrol = enrol_get_plugin('database');
-$result = 0;
-
-//print_r("Sync Courses");
-mtrace ("**** Creating Courses ****");
-$result = $result | $enrol->sync_courses($trace);
-
-mtrace ("**** Enroling Users Courses ****");
-$result = $result | $enrol->sync_enrolments($trace);
-
-sync_generate_mail($options, 1, null, null, 2);
 
 exit($result);
