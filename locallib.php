@@ -760,7 +760,9 @@ function sync_htmldata ($options = null, $syncFail) {
     if ($options['debug']) print_r($syncFail);
     if (count($syncFail) > 0) {
         foreach ($syncFail as $fails) {
-            $table .= "<p><b>Periodo Académico:</b> {$fails[0]} - <b>Cursos Sincronizados:</b> {$fails[1]} - <b>Enrols Totales:</b> {$fails[2]}</p>";
+            $critical = "No";
+            if ($fails[3] > 0) $critical = "Sí";
+            $table .= "<p><b>Periodo Académico:</b> {$fails[0]} - <b>Cursos Sincronizados:</b> {$fails[1]} - <b>Enrols Totales:</b> {$fails[2]} - <b>Error Critico:</b> {$critical}</p>";
         }
     }
 
@@ -845,8 +847,12 @@ function sync_omega ($options = null) {
         return 1; // Omega Services not working - abort
     }
     $syncinfo = sync_sincronize_current_periods ($options);
+
+    // Get Sync Errors
+    $synccritical = sync_get_critical_errors ($syncinfo, $options);
     $syncfail = sync_get_failed_periods ($syncinfo, $options);
-    if (count($syncfail) > 0) $error = 1;
+
+    if (count($synccritical) > 0) $error = 1;
     sync_set_execution_status ($error);
     // Validate emarking grading methods error (Deprecated - Fixed on emarking plugin)
 
@@ -1029,14 +1035,26 @@ function sync_add_to_history ($syncinfo, $options) {
     $DB->insert_records("sync_history", $historyrecords);
 }
 
+function sync_get_critical_errors ($syncinfo, $options) {
+    global $DB;
+
+    $syncfail = array(); // sync fail array
+    foreach ($syncinfo as $academic => $rowinfo) {
+        if ($academic > 0 && $rowinfo["error"] == 1) {
+            array_push($syncfail,array($academic, $rowinfo["course"], $rowinfo["enrol"]));
+        }
+    }
+    return $syncfail;
+}
+
 function sync_get_failed_periods ($syncinfo, $options) {
     global $DB;
 
     $syncfail = array(); // sync fail array
     foreach ($syncinfo as $academic => $rowinfo) {
-        //if (($academic > 0) && ($rowinfo["course"] == 0 || $rowinfo["enrol"] == 0)) {
-        if ($academic > 0 && $rowinfo["error"] == 1) {
-            array_push($syncfail,array($academic, $rowinfo["course"], $rowinfo["enrol"]));
+        if (($academic > 0) && ($rowinfo["course"] == 0 || $rowinfo["enrol"] == 0 || $rowinfo["error"] == 1)) {
+            if ($rowinfo["error"] == 1) array_push($syncfail,array($academic, $rowinfo["course"], $rowinfo["enrol"], 1));
+            else array_push($syncfail,array($academic, $rowinfo["course"], $rowinfo["enrol"], 0));
         }
     }
     return $syncfail;
