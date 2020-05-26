@@ -601,7 +601,7 @@ function sync_records_tabs() {
 	return $tabs;
 }
 
-function sync_sendmail($options = null, $userlist, $syncfail = null, $fixedcourses = null, $error, $type = 0) {
+function sync_sendmail($options = null, $userlist, $syncfail = null, $synccritical = null, $fixedcourses = null, $type = 0) {
     GLOBAL $CFG, $USER, $DB;
     $userfrom = core_user::get_noreply_user();
     $userfrom->maildisplay = true;
@@ -611,6 +611,7 @@ function sync_sendmail($options = null, $userlist, $syncfail = null, $fixedcours
 	foreach ($userlist as $user){
         $eventdata = new \core\message\message();
 
+        // Sync Omega
         if ($type == 0) {
 
             $subject = "Sync Omega";
@@ -618,8 +619,10 @@ function sync_sendmail($options = null, $userlist, $syncfail = null, $fixedcours
             $messagehtml = "<html>".
                 "<p>Estimado/a: {$user[1]} {$user[2]},</p>".
                 "<p>Se ha completado la tarea de sincronización: " . date('d/m/Y h:i:s a', time()). "</p>".
+                "<p><b>Errores criticos de Sincronización:</b></p>".
+                "<p>#DATACRIT#</p>".
                 "<p><b>Errores de Sincronización:</b></p>".
-                "<p>#DATAHERE#</p>".
+                "<p>#DATAERROR#</p>".
                 "<p><b>Corrección de Cursos:</b></p>".
                 "<p>#DATACOURSES#</p>".
                 "<p>Atentamente,</p>".
@@ -628,20 +631,31 @@ function sync_sendmail($options = null, $userlist, $syncfail = null, $fixedcours
 
             $messagetext = "<p>Estimado/a: {$user[1]} {$user[2]},</p>".
                 "<p>Se ha completado la tarea de sincronización: " . date('d/m/Y h:i:s a', time()). "</p>".
+                "<p><b>Errores criticos de Sincronización:</b></p>".
+                "<p>#DATACRIT#</p>".
                 "<p><b>Errores de Sincronización:</b></p>".
-                "<p>#DATAHERE#</p>".
+                "<p>#DATAERROR#</p>".
                 "<p><b>Corrección de Cursos:</b></p>".
                 "<p>#DATACOURSES#</p>".
                 "<p>Atentamente,</p>".
                 "<p>Equipo de WebCursos</p>";
 
-            if ($error == 1) {
-                $messagehtml = str_replace("#DATAHERE#", sync_htmldata($options, $syncfail), $messagehtml);
-                $messagetext = str_replace("#DATAHERE#", sync_htmldata($options, $syncfail), $messagetext);
+            if (count($syncfail) > 0) {
+                $messagehtml = str_replace("#DATAERROR#", sync_htmldata($options, $syncfail), $messagehtml);
+                $messagetext = str_replace("#DATAERROR#", sync_htmldata($options, $syncfail), $messagetext);
             }
             else {
-                $messagehtml = str_replace("#DATAHERE#", "", $messagehtml);
-                $messagetext = str_replace("#DATAHERE#", "", $messagetext);
+                $messagehtml = str_replace("#DATAERROR#", "", $messagehtml);
+                $messagetext = str_replace("#DATAERROR#", "", $messagetext);
+            }
+
+            if (count($synccritical) > 0) {
+                $messagehtml = str_replace("#DATACRIT#", sync_htmldata($options, $syncfail), $messagehtml);
+                $messagetext = str_replace("#DATACRIT#", sync_htmldata($options, $syncfail), $messagetext);
+            }
+            else {
+                $messagehtml = str_replace("#DATACRIT#", "", $messagehtml);
+                $messagetext = str_replace("#DATACRIT#", "", $messagetext);
             }
 
             if (count($fixedcourses) > 0) {
@@ -654,6 +668,7 @@ function sync_sendmail($options = null, $userlist, $syncfail = null, $fixedcours
             }
         }
 
+        // Omega Services Down
         if ($type == 1) {
 
             $subject = "Sync Omega";
@@ -674,6 +689,7 @@ function sync_sendmail($options = null, $userlist, $syncfail = null, $fixedcours
 
         }
 
+        // External Database Ok
         if ($type == 2) {
 
             $subject = "Sync External Database";
@@ -692,6 +708,7 @@ function sync_sendmail($options = null, $userlist, $syncfail = null, $fixedcours
 
         }
 
+        // External Database Error - Plugin de Sincronización Deshabilitado
         if ($type == 3) {
 
             $subject = "Sync External Database Error";
@@ -712,6 +729,7 @@ function sync_sendmail($options = null, $userlist, $syncfail = null, $fixedcours
 
         }
 
+        // External Database Error - Sync Omega Error
         if ($type == 4) {
 
             $subject = "Sync External Database Error";
@@ -760,9 +778,7 @@ function sync_htmldata ($options = null, $syncFail) {
     if ($options['debug']) print_r($syncFail);
     if (count($syncFail) > 0) {
         foreach ($syncFail as $fails) {
-            $critical = "No";
-            if ($fails[3] > 0) $critical = "Sí";
-            $table .= "<p><b>Periodo Académico:</b> {$fails[0]} - <b>Cursos Sincronizados:</b> {$fails[1]} - <b>Enrols Totales:</b> {$fails[2]} - <b>Error Critico:</b> {$critical}</p>";
+            $table .= "<p><b>Periodo Académico:</b> {$fails[0]} - <b>Cursos Sincronizados:</b> {$fails[1]} - <b>Enrols Totales:</b> {$fails[2]}</p>";
         }
     }
 
@@ -849,8 +865,9 @@ function sync_omega ($options = null) {
     $syncinfo = sync_sincronize_current_periods ($options);
 
     // Get Sync Errors
-    $synccritical = sync_get_critical_errors ($syncinfo, $options);
-    $syncfail = sync_get_failed_periods ($syncinfo, $options);
+
+    $synccritical = sync_get_failed_periods ($syncinfo,1 , $options);
+    $syncfail = sync_get_failed_periods ($syncinfo, 0, $options);
 
     if (count($synccritical) > 0) $error = 1;
     sync_set_execution_status ($error);
@@ -859,7 +876,7 @@ function sync_omega ($options = null) {
     // Fix courses fullname and shortname
     $fixedcourses = sync_fix_created_courses($options);
 
-    sync_generate_mail($options, $syncfail, $fixedcourses, $error, 0);
+    sync_generate_mail($options, $syncfail, $synccritical, $fixedcourses, 0);
     return $error;
 
 }
@@ -1047,14 +1064,19 @@ function sync_get_critical_errors ($syncinfo, $options) {
     return $syncfail;
 }
 
-function sync_get_failed_periods ($syncinfo, $options) {
+function sync_get_failed_periods ($syncinfo, $criticos, $options) {
     global $DB;
 
     $syncfail = array(); // sync fail array
     foreach ($syncinfo as $academic => $rowinfo) {
         if (($academic > 0) && ($rowinfo["course"] == 0 || $rowinfo["enrol"] == 0 || $rowinfo["error"] == 1)) {
-            if ($rowinfo["error"] == 1) array_push($syncfail,array($academic, $rowinfo["course"], $rowinfo["enrol"], 1));
-            else array_push($syncfail,array($academic, $rowinfo["course"], $rowinfo["enrol"], 0));
+
+            if ($criticos == 1){
+                if ($rowinfo["error"] == 1) array_push($syncfail,array($academic, $rowinfo["course"], $rowinfo["enrol"], 1));
+            }
+            else {
+                if ($rowinfo["error"] == 0) array_push($syncfail,array($academic, $rowinfo["course"], $rowinfo["enrol"], 0));
+            }
         }
     }
     return $syncfail;
@@ -1132,11 +1154,11 @@ function sync_fix_courses_update($errorlist, $options) {
 
 }
 
-function sync_generate_mail($options = null, $syncfail = null, $fixedcourses = null , $error, $type = 0) {
+function sync_generate_mail($options = null, $syncfail = null, $synccritical = null, $fixedcourses = null, $type = 0) {
     mtrace("Enviando correos a usuarios");
     // Add Script to get list o users who will receive the mail
     $userlist = sync_get_users_email_list();
-    sync_sendmail($options, $userlist, $syncfail, $fixedcourses, $error, $type);
+    sync_sendmail($options, $userlist, $syncfail, $synccritical, $fixedcourses, $type);
 }
 
 function sync_set_execution_status ($error) {
