@@ -652,8 +652,8 @@ function sync_sendmail($options = null, $userlist, $syncfail = null, $synccritic
             }
 
             if (count($synccritical) > 0) {
-                $messagehtml = str_replace("#DATACRIT#", sync_htmldata($options, $syncfail), $messagehtml);
-                $messagetext = str_replace("#DATACRIT#", sync_htmldata($options, $syncfail), $messagetext);
+                $messagehtml = str_replace("#DATACRIT#", sync_htmldata($options, $synccritical), $messagehtml);
+                $messagetext = str_replace("#DATACRIT#", sync_htmldata($options, $synccritical), $messagetext);
             }
             else {
                 $messagehtml = str_replace("#DATACRIT#", "", $messagehtml);
