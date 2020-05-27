@@ -76,7 +76,7 @@ function sync_validateomega_services($options = null){
     return $result;
 }
 
-function sync_getusers_fromomega($academicids, $syncinfo, $options = null){
+function sync_getusers_fromomega($academicids, $syncinfo, $options = null, $forcefail = 0){
 	global $DB, $CFG;
 
     $registros = 0;
@@ -111,6 +111,7 @@ function sync_getusers_fromomega($academicids, $syncinfo, $options = null){
                 throw new Exception(curl_error($curl));
             }
             curl_close($curl);
+            if ($forcefail == 1) $result = null;
             $registros = count($result);
 
         } catch (Exception $e) {
@@ -192,7 +193,7 @@ function sync_getusers_fromomega($academicids, $syncinfo, $options = null){
 	return array($users,$metausers, $syncinfo);
 }
 
-function sync_getcourses_fromomega($academicids, $syncinfo, $options = null){
+function sync_getcourses_fromomega($academicids, $syncinfo, $options = null, $forcefail = 0){
 	global $CFG;
 
 	$registros = 0;
@@ -228,6 +229,7 @@ function sync_getcourses_fromomega($academicids, $syncinfo, $options = null){
             }
 
             curl_close($curl);
+            if ($forcefail == 1) $result = null;
             $registros = count($result);
 
         } catch (Exception $e) {
@@ -978,7 +980,7 @@ function sync_sincronize_current_periods ($options) {
             $syncinfo[$academicid]["error"] = 0;
 
             // ******************* get courses from omega ************************
-            list($courses, $syncinfo) = sync_getcourses_fromomega($academicid, $syncinfo, $options["debug"]);
+            list($courses, $syncinfo) = sync_getcourses_fromomega($academicid, $syncinfo, $options["debug"], $options["forcefail"]);
             if (count($courses) > 0) {
                 sync_delete_course_table ($academicid, $options);
                 mtrace ("Inserting courses into courses table");
@@ -989,7 +991,7 @@ function sync_sincronize_current_periods ($options) {
             }
 
             // ********************* Get users from omega **********************
-            list($users, $metausers, $syncinfo) = sync_getusers_fromomega($academicid, $syncinfo, $options["debug"]);
+            list($users, $metausers, $syncinfo) = sync_getusers_fromomega($academicid, $syncinfo, $options["debug"], $options["forcefail"]);
             if ($users > 0) {
                 sync_delete_users_table ($academicid, $options);
                 mtrace ("Inserting users into enrol table");
