@@ -1178,17 +1178,26 @@ function sync_get_execution_status ($id = 0) {
     global $DB;
 
     if ($id == 0) $id = sync_get_max_execution_id ();
-    $sql = "Select id, executiondate, result From {sync_result} where id = (select max(id) from {sync_result})";
-    $sqlstatus = $DB->get_records_sql($sql, null);
+    mtrace ("id = {$id}");
+    $sql = "Select id, executiondate, result From {sync_result} where id = ?";
+    $sqlstatus = $DB->get_records_sql($sql, array($id));
 
-    return $sqlstatus;
+    foreach ($sqlstatus as $stat) {
+        $resp = $stat;
+    }
+
+    return $resp;
 }
 
 function sync_get_max_execution_id () {
     global $DB;
 
-    $sql = "select max(id) from {sync_result}";
-    $sqlstatus = $DB->get_records_sql($sql, null);
+    $sql = "select max(id) as id from {sync_result}";
+    $sqlstatus = $DB->get_records_sql($sql);
 
-    return $sqlstatus->id;
+    foreach($sqlstatus as $stat){
+        $id = $stat->id;
+    }
+
+    return $id;
 }

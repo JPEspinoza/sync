@@ -71,7 +71,8 @@ cli_heading('Omega Sync Database'); // TODO: localize
 echo "\nStarting at ".date("F j, Y, G:i:s")."\n";
 
 $status = sync_get_execution_status();
-if ($status->id > 0) {
+print_r($status);
+if ($status->result > 0) {
     mtrace('sync_omega failed, synchronisation stopped');
     sync_generate_mail($options, null, null, null, 4);
     exit(0);
