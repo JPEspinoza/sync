@@ -796,7 +796,8 @@ function sync_htmldatacourses ($options = null, $fixedcourses) {
             if ($options['debug']) print_r($course);
             $fix = "No";
             if ($course->fixed > 0) $fix = "Sí";
-            $table .= "<p><b>Id:</b> {$course->id} - <b>Shortname:</b> {$course->syncshortname} - <b>Fullname:</b> {$course->syncfullname} - <b>Result:</b> {$fix}</p>";
+            //$table .= "<p><b>Id:</b> {$course->id} - <b>Shortname:</b> {$course->syncshortname} - <b>Fullname:</b> {$course->syncfullname} - <b>Result:</b> {$fix}</p>";
+            $table .= "<p><b>Id:</b> {$course->id} - <b>Shortname:</b> {$course->syncshortname} - <b>Result:</b> {$fix}</p>";
         }
     }
 
@@ -1114,9 +1115,14 @@ function sync_fix_created_courses($options) {
 function sync_get_courses_to_fix($options) {
     global $DB;
 
+    /*
     $sql = "select s.shortname as syncshortname, s.fullname as syncfullname, c.id, c.shortname as courseshortname, c.fullname as coursefullname
     from mdl_sync_course s
     join mdl_course c on c.idnumber = s.idnumber AND (c.shortname != s.shortname OR s.fullname != c.fullname)";
+    */
+    $sql = "select s.shortname as syncshortname, s.fullname as syncfullname, c.id, c.shortname as courseshortname, c.fullname as coursefullname
+    from mdl_sync_course s
+    join mdl_course c on c.idnumber = s.idnumber AND c.shortname != s.shortname";
     $regs = $DB->get_records_sql($sql);
 
     return $regs;
@@ -1133,9 +1139,10 @@ function sync_fix_courses_update($errorlist, $options) {
 
         // Validating and changing shortname and fullname if necesary
         if ($course->shortname != $coursetofix->syncshortname) $course->shortname = $coursetofix->syncshortname;
-        if ($course->fullname != $coursetofix->syncfullname) $course->fullname = $coursetofix->syncfullname;
+        //if ($course->fullname != $coursetofix->syncfullname) $course->fullname = $coursetofix->syncfullname;
         try {
-            mtrace ("Fixing course {$coursetofix->id} with shortname: {$coursetofix->syncshortname} and fullname: {$coursetofix->syncfullname}");
+            //mtrace ("Fixing course {$coursetofix->id} with shortname: {$coursetofix->syncshortname} and fullname: {$coursetofix->syncfullname}");
+            mtrace ("Fixing course {$coursetofix->id} with shortname: {$coursetofix->syncshortname}");
             update_course($course); // course/lib.php // Execute update
             mtrace ("Fix completed");
         } catch (Exception $e) {
