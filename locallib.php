@@ -124,6 +124,7 @@ function sync_getusers_fromomega($academicids, $syncinfo, $options = null, $forc
 
     $users = array();
     $metausers = array();
+    $unidadacademicaid = 0;
 
     if ($registros > 0) {
         // Check the version to use the corrects functions
@@ -142,6 +143,7 @@ function sync_getusers_fromomega($academicids, $syncinfo, $options = null, $forc
 
         foreach($result as $user) {
             if($user->Email !== "" && $user->Email !== NULL){
+                if ($unidadacademicaid == 0) $unidadacademicaid = $user->UnidadAcademicaId;
                 $insertdata = new stdClass();
                 $academicid = $user->PeriodoAcademicoId;
                 if(!isset($academicdbycourseid[$user->SeccionId]) || empty($academicdbycourseid[$user->SeccionId])) $insertdata->course = NULL;
@@ -170,16 +172,20 @@ function sync_getusers_fromomega($academicids, $syncinfo, $options = null, $forc
                     if ($options['debug']) mtrace("USER: ".$insertdata->user." TYPE: ".$insertdata->role." COURSE: ".$insertdata->course);
                 }
 
-                $generalcoursedata = new stdClass();
-                $generalcoursedata->course = ($insertdata->role == $CFG->sync_teachername) ? $academicid."-PROFESORES" : $academicid."-ALUMNOS";
-                $generalcoursedata->user = $insertdata->user;
-                $generalcoursedata->role = $CFG->sync_studentname;
+                // Se crean los cursos de alumnos y profesores solamente cuando es pregrado
+                if ($unidadacademicaid == 1 || $unidadacademicaid == 2) {
 
-                if($insertdata->role != $CFG->sync_noneditingteachername){
-                    if(!in_array($generalcoursedata, $metausers)) {
-                        $metausers[] = $generalcoursedata;
-                        $syncinfo[$academicid]["enrol"] += 1;
-                        if ($options['debug']) mtrace("USER: ".$insertdata->user." TYPE: ".$generalcoursedata->role." COURSE: ".$generalcoursedata->course);
+                    $generalcoursedata = new stdClass();
+                    $generalcoursedata->course = ($insertdata->role == $CFG->sync_teachername) ? $academicid . "-PROFESORES" : $academicid . "-ALUMNOS";
+                    $generalcoursedata->user = $insertdata->user;
+                    $generalcoursedata->role = $CFG->sync_studentname;
+
+                    if ($insertdata->role != $CFG->sync_noneditingteachername) {
+                        if (!in_array($generalcoursedata, $metausers)) {
+                            $metausers[] = $generalcoursedata;
+                            $syncinfo[$academicid]["enrol"] += 1;
+                            if ($options['debug']) mtrace("USER: " . $insertdata->user . " TYPE: " . $generalcoursedata->role . " COURSE: " . $generalcoursedata->course);
+                        }
                     }
                 }
             } elseif ($options['debug']) {
@@ -244,9 +250,11 @@ function sync_getcourses_fromomega($academicids, $syncinfo, $options = null, $fo
 	}
 
     $courses = array();
+    $unidadacademicaid = 0;
 	if ($registros > 0) {
 
         foreach($result as $course) {
+            if ($unidadacademicaid == 0) $unidadacademicaid = $course->UnidadAcademicaId;
             $insertdata = new stdClass();
             $insertdata->dataid = $syncinfo[$course->PeriodoAcademicoId]["dataid"];
             // Format ISO-8859-1 Fullname
@@ -263,26 +271,29 @@ function sync_getcourses_fromomega($academicids, $syncinfo, $options = null, $fo
             }
         }
 
-        // Build the academic period's general students course
-        $studentscourse = new StdClass();
-        $studentscourse->dataid = $syncinfo[$academicids]["dataid"];
-        $studentscourse->fullname = "Alumnos ".$syncinfo[$academicids]["periodname"];
-        $studentscourse->shortname = $academicids."-ALUMNOS";
-        $studentscourse->idnumber = NULL;
-        $studentscourse->categoryid = $syncinfo[$academicids]["categoryid"];
+        // Se crean los cursos de alumnos y profesores solamente cuando es pregrado
+        if ($unidadacademicaid == 1 || $unidadacademicaid == 2) {
+            // Build the academic period's general students course
+            $studentscourse = new StdClass();
+            $studentscourse->dataid = $syncinfo[$academicids]["dataid"];
+            $studentscourse->fullname = "Alumnos " . $syncinfo[$academicids]["periodname"];
+            $studentscourse->shortname = $academicids . "-ALUMNOS";
+            $studentscourse->idnumber = NULL;
+            $studentscourse->categoryid = $syncinfo[$academicids]["categoryid"];
 
-        // Build the academic period's general teachers course
-        $teacherscourse = new StdClass();
-        $teacherscourse->dataid = $syncinfo[$academicids]["dataid"];
-        $teacherscourse->fullname = "Profesores ".$syncinfo[$academicids]["periodname"];
-        $teacherscourse->shortname = $academicids."-PROFESORES";
-        $teacherscourse->idnumber = NULL;
-        $teacherscourse->categoryid = $syncinfo[$academicids]["categoryid"];
-        if ($options['debug']) mtrace("COURSE: ".$studentscourse->shortname." CATEGORY: ".$studentscourse->categoryid);
-        $courses[] = $studentscourse;
-        $syncinfo[$course->PeriodoAcademicoId]["course"] += 1;
-        $courses[] = $teacherscourse;
-        $syncinfo[$course->PeriodoAcademicoId]["course"] += 1;
+            // Build the academic period's general teachers course
+            $teacherscourse = new StdClass();
+            $teacherscourse->dataid = $syncinfo[$academicids]["dataid"];
+            $teacherscourse->fullname = "Profesores " . $syncinfo[$academicids]["periodname"];
+            $teacherscourse->shortname = $academicids . "-PROFESORES";
+            $teacherscourse->idnumber = NULL;
+            $teacherscourse->categoryid = $syncinfo[$academicids]["categoryid"];
+            if ($options['debug']) mtrace("COURSE: " . $studentscourse->shortname . " CATEGORY: " . $studentscourse->categoryid);
+            $courses[] = $studentscourse;
+            $syncinfo[$course->PeriodoAcademicoId]["course"] += 1;
+            $courses[] = $teacherscourse;
+            $syncinfo[$course->PeriodoAcademicoId]["course"] += 1;
+        }
 
     } else {
 	    mtrace("No courses obtained");
@@ -1115,18 +1126,19 @@ function sync_fix_created_courses($options) {
 function sync_get_courses_to_fix($options) {
     global $DB;
 
+
+    $sql = "select s.shortname as syncshortname, s.fullname as syncfullname, c.id, c.shortname as courseshortname, c.fullname as coursefullname
+    from {sync_course} s
+    join {course} c on c.idnumber = s.idnumber AND (c.shortname != s.shortname OR s.fullname != c.fullname)";
     /*
     $sql = "select s.shortname as syncshortname, s.fullname as syncfullname, c.id, c.shortname as courseshortname, c.fullname as coursefullname
     from mdl_sync_course s
-    join mdl_course c on c.idnumber = s.idnumber AND (c.shortname != s.shortname OR s.fullname != c.fullname)";
-    */
-    $sql = "select s.shortname as syncshortname, s.fullname as syncfullname, c.id, c.shortname as courseshortname, c.fullname as coursefullname
-    from mdl_sync_course s
-    join mdl_course c on c.idnumber = s.idnumber AND c.shortname != s.shortname";
+    join mdl_course c on c.idnumber = s.idnumber AND c.shortname != s.shortname";*/
     $regs = $DB->get_records_sql($sql);
 
     return $regs;
 }
+
 
 function sync_fix_courses_update($errorlist, $options) {
     global $DB;
@@ -1139,16 +1151,15 @@ function sync_fix_courses_update($errorlist, $options) {
 
         // Validating and changing shortname and fullname if necesary
         if ($course->shortname != $coursetofix->syncshortname) $course->shortname = $coursetofix->syncshortname;
-        //if ($course->fullname != $coursetofix->syncfullname) $course->fullname = $coursetofix->syncfullname;
+        if ($course->fullname != $coursetofix->syncfullname) $course->fullname = $coursetofix->syncfullname;
         try {
-            //mtrace ("Fixing course {$coursetofix->id} with shortname: {$coursetofix->syncshortname} and fullname: {$coursetofix->syncfullname}");
-            mtrace ("Fixing course {$coursetofix->id} with shortname: {$coursetofix->syncshortname}");
+            mtrace ("Fixing course {$coursetofix->id} with shortname: {$coursetofix->syncshortname} and fullname: {$coursetofix->syncfullname}");
+            //mtrace ("Fixing course {$coursetofix->id} with shortname: {$coursetofix->syncshortname}");
             update_course($course); // course/lib.php // Execute update
             mtrace ("Fix completed");
         } catch (Exception $e) {
-                mtrace("Excepción capturada: {$e->getMessage()}");
+            mtrace("Excepción capturada: {$e->getMessage()}");
         }
-
 
         // Validate change
         $course = $DB->get_records("course", array("id" => $coursetofix->id));
