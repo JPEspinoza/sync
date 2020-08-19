@@ -71,9 +71,10 @@ cli_heading('Omega Sync Database'); // TODO: localize
 echo "\nStarting at ".date("F j, Y, G:i:s")."\n";
 
 $status = sync_get_execution_status();
-if ($status->id > 0) {
+print_r($status);
+if ($status->result > 0) {
     mtrace('sync_omega failed, synchronisation stopped');
-    sync_generate_mail($options, null, null, 1, 4);
+    sync_generate_mail($options, null, null, null, 4);
     exit(0);
 }
 
@@ -81,7 +82,7 @@ if ($status->id > 0) {
 mtrace("******************** Starting External Database Enrol ********************");
 if (!enrol_is_enabled('database')) {
     cli_error('enrol_database plugin is disabled, synchronisation stopped', 2);
-    sync_generate_mail($options, null, null, 1, 3);
+    sync_generate_mail($options, null, null, null, 3);
 }
 
 if (empty($options['verbose'])) {
@@ -102,7 +103,7 @@ $result = $result | $enrol->sync_courses($trace);
 mtrace ("**** Enroling Users Courses ****");
 $result = $result | $enrol->sync_enrolments($trace);
 
-sync_generate_mail($options, 1, null, null, 2);
+sync_generate_mail($options, null, null, null, 2);
 
 echo "\nEnding at ".date("F j, Y, G:i:s")."\n";
 exit($result);

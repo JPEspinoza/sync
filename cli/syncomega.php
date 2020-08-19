@@ -39,12 +39,14 @@ list($options, $unrecognized) = cli_get_params(array(
 		'help' => false,
 		'debug' => false,
         'academicperiodid' => 0,
-        'verbose'=>false
+        'verbose' => false,
+        'forcefail' => 0
 ), array(
 		'h' => 'help',
 		'd' => 'debug',
         'a' => 'academicperiodid',
-        'v'=>'verbose'
+        'v' => 'verbose',
+        'f' => 'forcefail'
 ));
 
 if ($unrecognized) {

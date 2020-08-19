@@ -76,7 +76,7 @@ function sync_validateomega_services($options = null){
     return $result;
 }
 
-function sync_getusers_fromomega($academicids, $syncinfo, $options = null){
+function sync_getusers_fromomega($academicids, $syncinfo, $options = null, $forcefail = 0){
 	global $DB, $CFG;
 
     $registros = 0;
@@ -111,6 +111,7 @@ function sync_getusers_fromomega($academicids, $syncinfo, $options = null){
                 throw new Exception(curl_error($curl));
             }
             curl_close($curl);
+            if ($forcefail == 1) $result = null;
             $registros = count($result);
 
         } catch (Exception $e) {
@@ -123,6 +124,7 @@ function sync_getusers_fromomega($academicids, $syncinfo, $options = null){
 
     $users = array();
     $metausers = array();
+    $unidadacademicaid = 0;
 
     if ($registros > 0) {
         // Check the version to use the corrects functions
@@ -141,6 +143,7 @@ function sync_getusers_fromomega($academicids, $syncinfo, $options = null){
 
         foreach($result as $user) {
             if($user->Email !== "" && $user->Email !== NULL){
+                if ($unidadacademicaid == 0) $unidadacademicaid = $user->UnidadAcademicaId;
                 $insertdata = new stdClass();
                 $academicid = $user->PeriodoAcademicoId;
                 if(!isset($academicdbycourseid[$user->SeccionId]) || empty($academicdbycourseid[$user->SeccionId])) $insertdata->course = NULL;
@@ -169,16 +172,20 @@ function sync_getusers_fromomega($academicids, $syncinfo, $options = null){
                     if ($options['debug']) mtrace("USER: ".$insertdata->user." TYPE: ".$insertdata->role." COURSE: ".$insertdata->course);
                 }
 
-                $generalcoursedata = new stdClass();
-                $generalcoursedata->course = ($insertdata->role == $CFG->sync_teachername) ? $academicid."-PROFESORES" : $academicid."-ALUMNOS";
-                $generalcoursedata->user = $insertdata->user;
-                $generalcoursedata->role = $CFG->sync_studentname;
+                // Se crean los cursos de alumnos y profesores solamente cuando es pregrado
+                if ($unidadacademicaid == 1 || $unidadacademicaid == 2) {
 
-                if($insertdata->role != $CFG->sync_noneditingteachername){
-                    if(!in_array($generalcoursedata, $metausers)) {
-                        $metausers[] = $generalcoursedata;
-                        $syncinfo[$academicid]["enrol"] += 1;
-                        if ($options['debug']) mtrace("USER: ".$insertdata->user." TYPE: ".$generalcoursedata->role." COURSE: ".$generalcoursedata->course);
+                    $generalcoursedata = new stdClass();
+                    $generalcoursedata->course = ($insertdata->role == $CFG->sync_teachername) ? $academicid . "-PROFESORES" : $academicid . "-ALUMNOS";
+                    $generalcoursedata->user = $insertdata->user;
+                    $generalcoursedata->role = $CFG->sync_studentname;
+
+                    if ($insertdata->role != $CFG->sync_noneditingteachername) {
+                        if (!in_array($generalcoursedata, $metausers)) {
+                            $metausers[] = $generalcoursedata;
+                            $syncinfo[$academicid]["enrol"] += 1;
+                            if ($options['debug']) mtrace("USER: " . $insertdata->user . " TYPE: " . $generalcoursedata->role . " COURSE: " . $generalcoursedata->course);
+                        }
                     }
                 }
             } elseif ($options['debug']) {
@@ -192,7 +199,7 @@ function sync_getusers_fromomega($academicids, $syncinfo, $options = null){
 	return array($users,$metausers, $syncinfo);
 }
 
-function sync_getcourses_fromomega($academicids, $syncinfo, $options = null){
+function sync_getcourses_fromomega($academicids, $syncinfo, $options = null, $forcefail = 0){
 	global $CFG;
 
 	$registros = 0;
@@ -228,6 +235,7 @@ function sync_getcourses_fromomega($academicids, $syncinfo, $options = null){
             }
 
             curl_close($curl);
+            if ($forcefail == 1) $result = null;
             $registros = count($result);
 
         } catch (Exception $e) {
@@ -242,9 +250,11 @@ function sync_getcourses_fromomega($academicids, $syncinfo, $options = null){
 	}
 
     $courses = array();
+    $unidadacademicaid = 0;
 	if ($registros > 0) {
 
         foreach($result as $course) {
+            if ($unidadacademicaid == 0) $unidadacademicaid = $course->UnidadAcademicaId;
             $insertdata = new stdClass();
             $insertdata->dataid = $syncinfo[$course->PeriodoAcademicoId]["dataid"];
             // Format ISO-8859-1 Fullname
@@ -261,26 +271,29 @@ function sync_getcourses_fromomega($academicids, $syncinfo, $options = null){
             }
         }
 
-        // Build the academic period's general students course
-        $studentscourse = new StdClass();
-        $studentscourse->dataid = $syncinfo[$academicids]["dataid"];
-        $studentscourse->fullname = "Alumnos ".$syncinfo[$academicids]["periodname"];
-        $studentscourse->shortname = $academicids."-ALUMNOS";
-        $studentscourse->idnumber = NULL;
-        $studentscourse->categoryid = $syncinfo[$academicids]["categoryid"];
+        // Se crean los cursos de alumnos y profesores solamente cuando es pregrado
+        if ($unidadacademicaid == 1 || $unidadacademicaid == 2) {
+            // Build the academic period's general students course
+            $studentscourse = new StdClass();
+            $studentscourse->dataid = $syncinfo[$academicids]["dataid"];
+            $studentscourse->fullname = "Alumnos " . $syncinfo[$academicids]["periodname"];
+            $studentscourse->shortname = $academicids . "-ALUMNOS";
+            $studentscourse->idnumber = NULL;
+            $studentscourse->categoryid = $syncinfo[$academicids]["categoryid"];
 
-        // Build the academic period's general teachers course
-        $teacherscourse = new StdClass();
-        $teacherscourse->dataid = $syncinfo[$academicids]["dataid"];
-        $teacherscourse->fullname = "Profesores ".$syncinfo[$academicids]["periodname"];
-        $teacherscourse->shortname = $academicids."-PROFESORES";
-        $teacherscourse->idnumber = NULL;
-        $teacherscourse->categoryid = $syncinfo[$academicids]["categoryid"];
-        if ($options['debug']) mtrace("COURSE: ".$studentscourse->shortname." CATEGORY: ".$studentscourse->categoryid);
-        $courses[] = $studentscourse;
-        $syncinfo[$course->PeriodoAcademicoId]["course"] += 1;
-        $courses[] = $teacherscourse;
-        $syncinfo[$course->PeriodoAcademicoId]["course"] += 1;
+            // Build the academic period's general teachers course
+            $teacherscourse = new StdClass();
+            $teacherscourse->dataid = $syncinfo[$academicids]["dataid"];
+            $teacherscourse->fullname = "Profesores " . $syncinfo[$academicids]["periodname"];
+            $teacherscourse->shortname = $academicids . "-PROFESORES";
+            $teacherscourse->idnumber = NULL;
+            $teacherscourse->categoryid = $syncinfo[$academicids]["categoryid"];
+            if ($options['debug']) mtrace("COURSE: " . $studentscourse->shortname . " CATEGORY: " . $studentscourse->categoryid);
+            $courses[] = $studentscourse;
+            $syncinfo[$course->PeriodoAcademicoId]["course"] += 1;
+            $courses[] = $teacherscourse;
+            $syncinfo[$course->PeriodoAcademicoId]["course"] += 1;
+        }
 
     } else {
 	    mtrace("No courses obtained");
@@ -601,7 +614,7 @@ function sync_records_tabs() {
 	return $tabs;
 }
 
-function sync_sendmail($options = null, $userlist, $syncfail = null, $fixedcourses = null, $error, $type = 0) {
+function sync_sendmail($options = null, $userlist, $syncfail = null, $synccritical = null, $fixedcourses = null, $type = 0) {
     GLOBAL $CFG, $USER, $DB;
     $userfrom = core_user::get_noreply_user();
     $userfrom->maildisplay = true;
@@ -611,6 +624,7 @@ function sync_sendmail($options = null, $userlist, $syncfail = null, $fixedcours
 	foreach ($userlist as $user){
         $eventdata = new \core\message\message();
 
+        // Sync Omega
         if ($type == 0) {
 
             $subject = "Sync Omega";
@@ -618,8 +632,10 @@ function sync_sendmail($options = null, $userlist, $syncfail = null, $fixedcours
             $messagehtml = "<html>".
                 "<p>Estimado/a: {$user[1]} {$user[2]},</p>".
                 "<p>Se ha completado la tarea de sincronización: " . date('d/m/Y h:i:s a', time()). "</p>".
+                "<p><b>Errores criticos de Sincronización:</b></p>".
+                "<p>#DATACRIT#</p>".
                 "<p><b>Errores de Sincronización:</b></p>".
-                "<p>#DATAHERE#</p>".
+                "<p>#DATAERROR#</p>".
                 "<p><b>Corrección de Cursos:</b></p>".
                 "<p>#DATACOURSES#</p>".
                 "<p>Atentamente,</p>".
@@ -628,20 +644,31 @@ function sync_sendmail($options = null, $userlist, $syncfail = null, $fixedcours
 
             $messagetext = "<p>Estimado/a: {$user[1]} {$user[2]},</p>".
                 "<p>Se ha completado la tarea de sincronización: " . date('d/m/Y h:i:s a', time()). "</p>".
+                "<p><b>Errores criticos de Sincronización:</b></p>".
+                "<p>#DATACRIT#</p>".
                 "<p><b>Errores de Sincronización:</b></p>".
-                "<p>#DATAHERE#</p>".
+                "<p>#DATAERROR#</p>".
                 "<p><b>Corrección de Cursos:</b></p>".
                 "<p>#DATACOURSES#</p>".
                 "<p>Atentamente,</p>".
                 "<p>Equipo de WebCursos</p>";
 
-            if ($error == 1) {
-                $messagehtml = str_replace("#DATAHERE#", sync_htmldata($options, $syncfail), $messagehtml);
-                $messagetext = str_replace("#DATAHERE#", sync_htmldata($options, $syncfail), $messagetext);
+            if (count($syncfail) > 0) {
+                $messagehtml = str_replace("#DATAERROR#", sync_htmldata($options, $syncfail), $messagehtml);
+                $messagetext = str_replace("#DATAERROR#", sync_htmldata($options, $syncfail), $messagetext);
             }
             else {
-                $messagehtml = str_replace("#DATAHERE#", "", $messagehtml);
-                $messagetext = str_replace("#DATAHERE#", "", $messagetext);
+                $messagehtml = str_replace("#DATAERROR#", "", $messagehtml);
+                $messagetext = str_replace("#DATAERROR#", "", $messagetext);
+            }
+
+            if (count($synccritical) > 0) {
+                $messagehtml = str_replace("#DATACRIT#", sync_htmldata($options, $synccritical), $messagehtml);
+                $messagetext = str_replace("#DATACRIT#", sync_htmldata($options, $synccritical), $messagetext);
+            }
+            else {
+                $messagehtml = str_replace("#DATACRIT#", "", $messagehtml);
+                $messagetext = str_replace("#DATACRIT#", "", $messagetext);
             }
 
             if (count($fixedcourses) > 0) {
@@ -654,6 +681,7 @@ function sync_sendmail($options = null, $userlist, $syncfail = null, $fixedcours
             }
         }
 
+        // Omega Services Down
         if ($type == 1) {
 
             $subject = "Sync Omega";
@@ -674,6 +702,7 @@ function sync_sendmail($options = null, $userlist, $syncfail = null, $fixedcours
 
         }
 
+        // External Database Ok
         if ($type == 2) {
 
             $subject = "Sync External Database";
@@ -692,6 +721,7 @@ function sync_sendmail($options = null, $userlist, $syncfail = null, $fixedcours
 
         }
 
+        // External Database Error - Plugin de Sincronización Deshabilitado
         if ($type == 3) {
 
             $subject = "Sync External Database Error";
@@ -712,6 +742,7 @@ function sync_sendmail($options = null, $userlist, $syncfail = null, $fixedcours
 
         }
 
+        // External Database Error - Sync Omega Error
         if ($type == 4) {
 
             $subject = "Sync External Database Error";
@@ -776,7 +807,8 @@ function sync_htmldatacourses ($options = null, $fixedcourses) {
             if ($options['debug']) print_r($course);
             $fix = "No";
             if ($course->fixed > 0) $fix = "Sí";
-            $table .= "<p><b>Id:</b> {$course->id} - <b>Shortname:</b> {$course->syncshortname} - <b>Fullname:</b> {$course->syncfullname} - <b>Result:</b> {$fix}</p>";
+            //$table .= "<p><b>Id:</b> {$course->id} - <b>Shortname:</b> {$course->syncshortname} - <b>Fullname:</b> {$course->syncfullname} - <b>Result:</b> {$fix}</p>";
+            $table .= "<p><b>Id:</b> {$course->id} - <b>Shortname:</b> {$course->syncshortname} - <b>Result:</b> {$fix}</p>";
         }
     }
 
@@ -845,15 +877,20 @@ function sync_omega ($options = null) {
         return 1; // Omega Services not working - abort
     }
     $syncinfo = sync_sincronize_current_periods ($options);
-    $syncfail = sync_get_failed_periods ($syncinfo, $options);
-    if (count($syncfail) > 0) $error = 1;
+
+    // Get Sync Errors
+
+    $synccritical = sync_get_failed_periods ($syncinfo,1 , $options);
+    $syncfail = sync_get_failed_periods ($syncinfo, 0, $options);
+
+    if (count($synccritical) > 0) $error = 1;
     sync_set_execution_status ($error);
     // Validate emarking grading methods error (Deprecated - Fixed on emarking plugin)
 
     // Fix courses fullname and shortname
     $fixedcourses = sync_fix_created_courses($options);
 
-    sync_generate_mail($options, $syncfail, $fixedcourses, $error, 0);
+    sync_generate_mail($options, $syncfail, $synccritical, $fixedcourses, 0);
     return $error;
 
 }
@@ -955,7 +992,7 @@ function sync_sincronize_current_periods ($options) {
             $syncinfo[$academicid]["error"] = 0;
 
             // ******************* get courses from omega ************************
-            list($courses, $syncinfo) = sync_getcourses_fromomega($academicid, $syncinfo, $options["debug"]);
+            list($courses, $syncinfo) = sync_getcourses_fromomega($academicid, $syncinfo, $options["debug"], $options["forcefail"]);
             if (count($courses) > 0) {
                 sync_delete_course_table ($academicid, $options);
                 mtrace ("Inserting courses into courses table");
@@ -966,7 +1003,7 @@ function sync_sincronize_current_periods ($options) {
             }
 
             // ********************* Get users from omega **********************
-            list($users, $metausers, $syncinfo) = sync_getusers_fromomega($academicid, $syncinfo, $options["debug"]);
+            list($users, $metausers, $syncinfo) = sync_getusers_fromomega($academicid, $syncinfo, $options["debug"], $options["forcefail"]);
             if ($users > 0) {
                 sync_delete_users_table ($academicid, $options);
                 mtrace ("Inserting users into enrol table");
@@ -1029,14 +1066,31 @@ function sync_add_to_history ($syncinfo, $options) {
     $DB->insert_records("sync_history", $historyrecords);
 }
 
-function sync_get_failed_periods ($syncinfo, $options) {
+function sync_get_critical_errors ($syncinfo, $options) {
     global $DB;
 
     $syncfail = array(); // sync fail array
     foreach ($syncinfo as $academic => $rowinfo) {
-        //if (($academic > 0) && ($rowinfo["course"] == 0 || $rowinfo["enrol"] == 0)) {
         if ($academic > 0 && $rowinfo["error"] == 1) {
             array_push($syncfail,array($academic, $rowinfo["course"], $rowinfo["enrol"]));
+        }
+    }
+    return $syncfail;
+}
+
+function sync_get_failed_periods ($syncinfo, $criticos, $options) {
+    global $DB;
+
+    $syncfail = array(); // sync fail array
+    foreach ($syncinfo as $academic => $rowinfo) {
+        if (($academic > 0) && ($rowinfo["course"] == 0 || $rowinfo["enrol"] == 0 || $rowinfo["error"] == 1)) {
+
+            if ($criticos == 1){
+                if ($rowinfo["error"] == 1) array_push($syncfail,array($academic, $rowinfo["course"], $rowinfo["enrol"], 1));
+            }
+            else {
+                if ($rowinfo["error"] == 0) array_push($syncfail,array($academic, $rowinfo["course"], $rowinfo["enrol"], 0));
+            }
         }
     }
     return $syncfail;
@@ -1072,13 +1126,19 @@ function sync_fix_created_courses($options) {
 function sync_get_courses_to_fix($options) {
     global $DB;
 
+
+    $sql = "select s.shortname as syncshortname, s.fullname as syncfullname, c.id, c.shortname as courseshortname, c.fullname as coursefullname
+    from {sync_course} s
+    join {course} c on c.idnumber = s.idnumber AND (c.shortname != s.shortname OR s.fullname != c.fullname)";
+    /*
     $sql = "select s.shortname as syncshortname, s.fullname as syncfullname, c.id, c.shortname as courseshortname, c.fullname as coursefullname
     from mdl_sync_course s
-    join mdl_course c on c.idnumber = s.idnumber AND (c.shortname != s.shortname OR s.fullname != c.fullname)";
+    join mdl_course c on c.idnumber = s.idnumber AND c.shortname != s.shortname";*/
     $regs = $DB->get_records_sql($sql);
 
     return $regs;
 }
+
 
 function sync_fix_courses_update($errorlist, $options) {
     global $DB;
@@ -1094,12 +1154,12 @@ function sync_fix_courses_update($errorlist, $options) {
         if ($course->fullname != $coursetofix->syncfullname) $course->fullname = $coursetofix->syncfullname;
         try {
             mtrace ("Fixing course {$coursetofix->id} with shortname: {$coursetofix->syncshortname} and fullname: {$coursetofix->syncfullname}");
+            //mtrace ("Fixing course {$coursetofix->id} with shortname: {$coursetofix->syncshortname}");
             update_course($course); // course/lib.php // Execute update
             mtrace ("Fix completed");
         } catch (Exception $e) {
-                mtrace("Excepción capturada: {$e->getMessage()}");
+            mtrace("Excepción capturada: {$e->getMessage()}");
         }
-
 
         // Validate change
         $course = $DB->get_records("course", array("id" => $coursetofix->id));
@@ -1114,11 +1174,11 @@ function sync_fix_courses_update($errorlist, $options) {
 
 }
 
-function sync_generate_mail($options = null, $syncfail = null, $fixedcourses = null , $error, $type = 0) {
+function sync_generate_mail($options = null, $syncfail = null, $synccritical = null, $fixedcourses = null, $type = 0) {
     mtrace("Enviando correos a usuarios");
     // Add Script to get list o users who will receive the mail
     $userlist = sync_get_users_email_list();
-    sync_sendmail($options, $userlist, $syncfail, $fixedcourses, $error, $type);
+    sync_sendmail($options, $userlist, $syncfail, $synccritical, $fixedcourses, $type);
 }
 
 function sync_set_execution_status ($error) {
@@ -1136,17 +1196,26 @@ function sync_get_execution_status ($id = 0) {
     global $DB;
 
     if ($id == 0) $id = sync_get_max_execution_id ();
-    $sql = "Select id, executiondate, result From {sync_result} where id = (select max(id) from {sync_result})";
-    $sqlstatus = $DB->get_records_sql($sql, null);
+    mtrace ("id = {$id}");
+    $sql = "Select id, executiondate, result From {sync_result} where id = ?";
+    $sqlstatus = $DB->get_records_sql($sql, array($id));
 
-    return $sqlstatus;
+    foreach ($sqlstatus as $stat) {
+        $resp = $stat;
+    }
+
+    return $resp;
 }
 
 function sync_get_max_execution_id () {
     global $DB;
 
-    $sql = "select max(id) from {sync_result}";
-    $sqlstatus = $DB->get_records_sql($sql, null);
+    $sql = "select max(id) as id from {sync_result}";
+    $sqlstatus = $DB->get_records_sql($sql);
 
-    return $sqlstatus->id;
+    foreach($sqlstatus as $stat){
+        $id = $stat->id;
+    }
+
+    return $id;
 }
