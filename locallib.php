@@ -258,7 +258,7 @@ function sync_getcourses_fromomega($academicids, $syncinfo, $options = null, $fo
             $insertdata = new stdClass();
             $insertdata->dataid = $syncinfo[$course->PeriodoAcademicoId]["dataid"];
             // Format ISO-8859-1 Fullname
-            $insertdata->fullname = $course->FullName;
+            $insertdata->fullname = db_encode($course->FullName);
             // Validate encode Fullname
             //mtrace(mb_detect_encoding($course->FullName,"ISO-8859-1, GBK, UTF-8"));
             $insertdata->shortname = $course->ShortName;
@@ -1209,7 +1209,7 @@ function sync_get_execution_status ($id = 0) {
 
 function sync_get_max_execution_id () {
     global $DB;
-
+    $id = 0;
     $sql = "select max(id) as id from {sync_result}";
     $sqlstatus = $DB->get_records_sql($sql);
 
@@ -1218,4 +1218,40 @@ function sync_get_max_execution_id () {
     }
 
     return $id;
+}
+
+function db_encode($text)
+{
+    global $DB;
+    $data = $DB->get_record("config_plugins", array("plugin" => "enrol_database", "name" => "dbencoding"));
+    $dbenc = $data->value;
+    if (empty($dbenc) or $dbenc == 'utf-8') {
+        return $text;
+    }
+    if (is_array($text)) {
+        foreach ($text as $k => $value) {
+            $text[$k] = db_encode($value);
+        }
+        return $text;
+    } else {
+        return core_text::convert($text, 'utf-8', $dbenc);
+    }
+}
+
+function db_decode($text) {
+    GLOBAL $DB;
+    $data = $DB->get_record("config_plugins", array("plugin" => "enrol_database", "name" => "dbencoding"));
+    $dbenc = $data->value;
+    echo $dbenc;
+    if (empty($dbenc) or $dbenc == 'utf-8') {
+        return $text;
+    }
+    if (is_array($text)) {
+        foreach($text as $k=>$value) {
+            $text[$k] = db_decode($value);
+        }
+        return $text;
+    } else {
+        return core_text::convert($text, $dbenc, 'utf-8');
+    }
 }
