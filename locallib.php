@@ -278,7 +278,7 @@ function sync_getcourses_fromomega($academicids, $syncinfo, $options = null, $fo
             $studentscourse->dataid = $syncinfo[$academicids]["dataid"];
             $studentscourse->fullname = "Alumnos " . $syncinfo[$academicids]["periodname"];
             $studentscourse->shortname = $academicids . "-ALUMNOS";
-            $studentscourse->idnumber = NULL;
+            $studentscourse->idnumber = "";
             $studentscourse->categoryid = $syncinfo[$academicids]["categoryid"];
 
             // Build the academic period's general teachers course
@@ -286,7 +286,7 @@ function sync_getcourses_fromomega($academicids, $syncinfo, $options = null, $fo
             $teacherscourse->dataid = $syncinfo[$academicids]["dataid"];
             $teacherscourse->fullname = "Profesores " . $syncinfo[$academicids]["periodname"];
             $teacherscourse->shortname = $academicids . "-PROFESORES";
-            $teacherscourse->idnumber = NULL;
+            $teacherscourse->idnumber = "";
             $teacherscourse->categoryid = $syncinfo[$academicids]["categoryid"];
             if ($options['debug']) mtrace("COURSE: " . $studentscourse->shortname . " CATEGORY: " . $studentscourse->categoryid);
             $courses[] = $studentscourse;
