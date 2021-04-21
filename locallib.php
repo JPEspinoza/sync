@@ -1126,14 +1126,11 @@ function sync_fix_created_courses($options) {
 function sync_get_courses_to_fix($options) {
     global $DB;
 
-
     $sql = "select s.shortname as syncshortname, s.fullname as syncfullname, c.id, c.shortname as courseshortname, c.fullname as coursefullname
     from {sync_course} s
-    join {course} c on c.idnumber = s.idnumber AND (c.shortname != s.shortname OR s.fullname != c.fullname)";
-    /*
-    $sql = "select s.shortname as syncshortname, s.fullname as syncfullname, c.id, c.shortname as courseshortname, c.fullname as coursefullname
-    from mdl_sync_course s
-    join mdl_course c on c.idnumber = s.idnumber AND c.shortname != s.shortname";*/
+    join {course} c on c.idnumber = s.idnumber AND (c.shortname != s.shortname OR s.fullname != c.fullname) 
+    where c.idnumber > 0 and s.idnumber > 0";
+
     $regs = $DB->get_records_sql($sql);
 
     return $regs;
