@@ -283,8 +283,28 @@ function xmldb_local_sync_upgrade($oldversion) {
 		// Sync savepoint reached.
 		upgrade_plugin_savepoint(true, 2016122804, 'local', 'sync');
 	}
-	
-	
+
+    if ($oldversion < 2020041300) {
+
+        // Define table sync_result to be created.
+        $table = new xmldb_table('sync_result');
+
+        // Adding fields to table sync_result.
+        $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
+        $table->add_field('executiondate', XMLDB_TYPE_INTEGER, '20', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('result', XMLDB_TYPE_INTEGER, '20', null, XMLDB_NOTNULL, null, null);
+
+        // Adding keys to table sync_result.
+        $table->add_key('primary', XMLDB_KEY_PRIMARY, array('id'));
+
+        // Conditionally launch create table for sync_result.
+        if (!$dbman->table_exists($table)) {
+            $dbman->create_table($table);
+        }
+
+        // Sync savepoint reached.
+        upgrade_plugin_savepoint(true, 2020041300, 'local', 'sync');
+    }
     
 	return true;
 }

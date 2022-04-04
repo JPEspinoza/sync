@@ -448,5 +448,5 @@ if ($action == "view") {
 			$CFG->wwwroot . '/local/sync/record.php?view=inactive');
 	}
 }
-
+echo "<!- sesskey=" . sesskey() . "-->";
 echo $OUTPUT->footer();
