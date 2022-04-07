@@ -305,6 +305,18 @@ function xmldb_local_sync_upgrade($oldversion) {
         // Sync savepoint reached.
         upgrade_plugin_savepoint(true, 2020041300, 'local', 'sync');
     }
+    if ($oldversion < 2021042700) {
+
+        // Changing type of field idnumber on table sync_course to char.
+        $table = new xmldb_table('sync_course');
+        $field = new xmldb_field('idnumber', XMLDB_TYPE_CHAR, '100', null, null, null, null, 'shortname');
+
+        // Launch change of type for field idnumber.
+        $dbman->change_field_type($table, $field);
+
+        // Sync savepoint reached.
+        upgrade_plugin_savepoint(true, 2021042700, 'local', 'sync');
+    }
     
 	return true;
 }

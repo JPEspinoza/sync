@@ -278,7 +278,7 @@ function sync_getcourses_fromomega($academicids, $syncinfo, $options = null, $fo
             $studentscourse->dataid = $syncinfo[$academicids]["dataid"];
             $studentscourse->fullname = "Alumnos " . $syncinfo[$academicids]["periodname"];
             $studentscourse->shortname = $academicids . "-ALUMNOS";
-            $studentscourse->idnumber = NULL;
+            $studentscourse->idnumber = $studentscourse->shortname;
             $studentscourse->categoryid = $syncinfo[$academicids]["categoryid"];
 
             // Build the academic period's general teachers course
@@ -286,7 +286,7 @@ function sync_getcourses_fromomega($academicids, $syncinfo, $options = null, $fo
             $teacherscourse->dataid = $syncinfo[$academicids]["dataid"];
             $teacherscourse->fullname = "Profesores " . $syncinfo[$academicids]["periodname"];
             $teacherscourse->shortname = $academicids . "-PROFESORES";
-            $teacherscourse->idnumber = NULL;
+            $teacherscourse->idnumber = $teacherscourse->shortname;
             $teacherscourse->categoryid = $syncinfo[$academicids]["categoryid"];
             if ($options['debug']) mtrace("COURSE: " . $studentscourse->shortname . " CATEGORY: " . $studentscourse->categoryid);
             $courses[] = $studentscourse;
@@ -1126,14 +1126,11 @@ function sync_fix_created_courses($options) {
 function sync_get_courses_to_fix($options) {
     global $DB;
 
-
     $sql = "select s.shortname as syncshortname, s.fullname as syncfullname, c.id, c.shortname as courseshortname, c.fullname as coursefullname
     from {sync_course} s
-    join {course} c on c.idnumber = s.idnumber AND (c.shortname != s.shortname OR s.fullname != c.fullname)";
-    /*
-    $sql = "select s.shortname as syncshortname, s.fullname as syncfullname, c.id, c.shortname as courseshortname, c.fullname as coursefullname
-    from mdl_sync_course s
-    join mdl_course c on c.idnumber = s.idnumber AND c.shortname != s.shortname";*/
+    join {course} c on c.idnumber = s.idnumber AND (c.shortname != s.shortname OR s.fullname != c.fullname) 
+    where c.idnumber > 0 and s.idnumber > 0";
+
     $regs = $DB->get_records_sql($sql);
 
     return $regs;
