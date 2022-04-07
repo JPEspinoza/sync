@@ -119,3 +119,6 @@ $string["syncwarningdesc"] = "Email addresses where synchronization error alerts
 
 $string["urlvalidateomega"] = "Omega Service validation URL.";
 $string["urlvalidateomegadesc"] = "URL Where it is validated that Omega services are functioning correctly.";
+
+$string["deactivate_many"] = "Disable selected";
+$string["select_all"] = "Select all";

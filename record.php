@@ -42,6 +42,7 @@ if (isguestuser()) {
 $insert = optional_param("insert", "", PARAM_TEXT);
 $action = optional_param("action", "view", PARAM_TEXT);
 $syncid = optional_param("syncid", null, PARAM_INT);
+$syncidmany = optional_param_array("syncidmany", null, PARAM_INT); # extra param used only for bulk disable/enable
 $unenrol = optional_param("unenrol", null, PARAM_TEXT);
 $view = optional_param("view", "active", PARAM_TEXT);
 $dataid = optional_param("dataid", 0, PARAM_INT);
@@ -123,6 +124,14 @@ if($action == "activate" && $USER->sesskey == $sesskey) {
 	$updatedata->status = 0;
 	$DB->update_record("sync_data", $updatedata);
 	$action = "view";
+} else if($action == "deactivatemany" && $USER->sesskey == $sesskey) {
+	foreach ($syncidmany as $syncid) {
+		$updatedata = new stdClass();	
+		$updatedata->id = $syncid;
+		$updatedata->status = 0;
+		$DB->update_record("sync_data", $updatedata);
+		$action = "view";
+	}
 }
 
 if (($action == "manual" || $action == "self") && $USER->sesskey == $sesskey) {
@@ -205,6 +214,16 @@ if ($action == "view") {
 		$synctable->no_sorting("edit");
 		$synctable->no_sorting("responsible");
 		$status = 1;
+
+		# show buttons for disabling in bulk
+		$disable_selected = get_string("deactivate_many", "local_sync");
+		$select_all = get_string("select_all", "local_sync");
+		echo "
+		<div class='text-right'>
+			<button class='btn btn-primary mb-3' onclick='disableselected()'> $disable_selected </button>
+			<button class='btn btn-primary mb-3' onclick='selectall()'> $select_all </button>
+		</div>
+		";
 	} else if($view == "inactive") {
 		$synctable->define_columns(array(
 				"number",
@@ -324,6 +343,9 @@ if ($action == "view") {
 				$activateicon_sync,
 				$pop
 		);
+		if ($dato->status == 1){
+			$activatection_sync .= "<input name='disablemany' value='$dato->id' type='checkbox'>";
+		}
 		
 		//Define manual_unsub icon and url
 		$manualurl_sync= new moodle_url("/local/sync/record.php", array(
@@ -449,4 +471,42 @@ if ($action == "view") {
 	}
 }
 echo "<!- sesskey=" . sesskey() . "-->";
+
+# javascript for bulk deactivation
+echo "
+<script>
+// this functions disables all selected syncs
+function disableselected()
+{
+	let selected = document.getElementsByName('disablemany');
+
+	let url = '/local/sync/record.php?action=deactivatemany&sesskey=" . sesskey() . "';
+
+	for(let i = 0; i < selected.length; i++) {
+		if(selected[i].checked) {
+			let id = selected[i].value;
+
+			// here we add the id to the url
+			// the index is ignored at the server side, we 
+			// just set it to the id to ensure its unique 
+			url += '&syncidmany['+id+']=' + id;
+		}
+	}
+
+	window.location.href = url;
+}
+
+// this functions selects all syncs
+function selectall()
+{
+	let selected = document.getElementsByName('disablemany');
+
+	for(let i = 0; i < selected.length; i++) {
+		selected[i].checked = true;
+	}
+}
+
+</script>
+";
+
 echo $OUTPUT->footer();

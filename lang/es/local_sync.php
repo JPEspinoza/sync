@@ -120,3 +120,6 @@ $string["syncwarningdesc"] = "Direcciones de correo donde las alertas de errores
 
 $string["urlvalidateomega"] = "URL validación de Servicios Omega.";
 $string["urlvalidateomegadesc"] = "URL Donde se validan que los servicios de Omega estén funcionando correctamente.";
+
+$string["deactivate_many"] = "Desactivar seleccionados";
+$string["select_all"] = "Seleccionar todos";
